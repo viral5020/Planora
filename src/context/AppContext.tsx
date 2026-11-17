@@ -446,88 +446,95 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const publishGatheringDraft = async () => {
-    if (SUPABASE_CONFIGURED && userId) {
-      const { data, error } = await supabase.from('events').insert({
-        title: gatheringDraft.title || 'New Gathering',
-        category: gatheringDraft.category,
-        image_url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
-        date: gatheringDraft.date,
-        time: gatheringDraft.time,
-        venue: gatheringDraft.venue,
-        city: selectedCity,
-        price: gatheringDraft.price,
-        total_capacity: gatheringDraft.capacity,
-        attending_count: 1,
-        host_id: userId,
-        vibe_description: 'A newly created gathering on Planora.',
-        vibe_tags: ['Community', 'Curated', gatheringDraft.category],
-        rules: ['Respect fellow guests', 'Arrive on time'],
-        is_curated: true,
-        has_host_approval: gatheringDraft.approvalMode === 'approval',
-      }).select().single();
+    if (SUPABASE_CONFIGURED) {
+      try {
+        const { data, error } = await supabase.from('events').insert({
+          title: gatheringDraft.title || 'New Gathering',
+          category: gatheringDraft.category || 'Public Social Experience',
+          image_url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
+          date: gatheringDraft.date || 'Upcoming',
+          time: gatheringDraft.time || 'TBD',
+          venue: gatheringDraft.venue || 'Local Venue',
+          city: selectedCity,
+          price: Number(gatheringDraft.price) || 0,
+          total_capacity: Number(gatheringDraft.capacity) || 50,
+          attending_count: 1,
+          host_id: userId || null,
+          vibe_description: 'A newly created gathering on Planora.',
+          vibe_tags: ['Community', 'Curated', gatheringDraft.category || 'Social'],
+          rules: ['Respect fellow guests', 'Arrive on time'],
+          is_curated: true,
+          has_host_approval: gatheringDraft.approvalMode === 'approval',
+        }).select().single();
 
-      if (!error && data) {
-        const newEvent: EventItem = {
-          id: data.id,
-          title: data.title,
-          category: data.category,
-          image: data.image_url,
-          date: data.date,
-          time: data.time,
-          venue: data.venue,
-          city: data.city,
-          price: data.price,
-          totalCapacity: data.total_capacity,
-          attendingCount: data.attending_count,
-          host: {
-            name: userProfile?.name ?? 'Host',
-            handle: userProfile?.handle ?? '@host',
-            avatar: userProfile?.avatar ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-            rating: 4.9,
-            badge: 'Top Host',
-          },
-          vibeDescription: data.vibe_description,
-          vibeTags: data.vibe_tags,
-          rules: data.rules,
-          status: 'approved',
-          isCurated: data.is_curated,
-          hasHostApproval: data.has_host_approval,
-        };
-        setEvents(prev => [newEvent, ...prev]);
-        setSelectedEvent(newEvent);
+        if (error) {
+          console.error('[Planora] Error publishing to Supabase:', error);
+        } else if (data) {
+          const newEvent: EventItem = {
+            id: data.id,
+            title: data.title,
+            category: data.category,
+            image: data.image_url,
+            date: data.date,
+            time: data.time,
+            venue: data.venue,
+            city: data.city,
+            price: data.price,
+            totalCapacity: data.total_capacity,
+            attendingCount: data.attending_count,
+            host: {
+              name: userProfile?.name ?? 'Aarav Mehta',
+              handle: userProfile?.handle ?? '@aarav_surat',
+              avatar: userProfile?.avatar ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+              rating: 4.9,
+              badge: 'Top Host',
+            },
+            vibeDescription: data.vibe_description,
+            vibeTags: data.vibe_tags ?? ['Community', 'Curated'],
+            rules: data.rules ?? ['Respect fellow guests'],
+            status: 'approved',
+            isCurated: data.is_curated,
+            hasHostApproval: data.has_host_approval,
+          };
+          setEvents(prev => [newEvent, ...prev]);
+          setSelectedEvent(newEvent);
+          navigateTo('create_step4_success');
+          return;
+        }
+      } catch (err) {
+        console.error('[Planora] Unexpected error publishing gathering:', err);
       }
-    } else {
-      // Local mock
-      const newEvent: EventItem = {
-        id: `gathering-${Date.now()}`,
-        title: gatheringDraft.title || 'New Gathering',
-        category: gatheringDraft.category,
-        image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
-        date: gatheringDraft.date,
-        time: gatheringDraft.time,
-        venue: gatheringDraft.venue,
-        city: selectedCity,
-        price: gatheringDraft.price,
-        totalCapacity: gatheringDraft.capacity,
-        attendingCount: 1,
-        host: {
-          name: 'Aarav Mehta',
-          handle: '@aarav_surat',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-          rating: 4.9,
-          badge: 'Top Host'
-        },
-        vibeDescription: 'A newly created gathering on Planora.',
-        vibeTags: ['Community', 'Curated', gatheringDraft.category],
-        rules: ['Respect fellow guests', 'Arrive on time'],
-        status: 'approved',
-        isCurated: true,
-        hasHostApproval: gatheringDraft.approvalMode === 'approval'
-      };
-      setEvents(prev => [newEvent, ...prev]);
-      setSelectedEvent(newEvent);
     }
 
+    // Local fallback
+    const newEvent: EventItem = {
+      id: `gathering-${Date.now()}`,
+      title: gatheringDraft.title || 'New Gathering',
+      category: gatheringDraft.category,
+      image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
+      date: gatheringDraft.date,
+      time: gatheringDraft.time,
+      venue: gatheringDraft.venue,
+      city: selectedCity,
+      price: gatheringDraft.price,
+      totalCapacity: gatheringDraft.capacity,
+      attendingCount: 1,
+      host: {
+        name: 'Aarav Mehta',
+        handle: '@aarav_surat',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        rating: 4.9,
+        badge: 'Top Host'
+      },
+      vibeDescription: 'A newly created gathering on Planora.',
+      vibeTags: ['Community', 'Curated', gatheringDraft.category],
+      rules: ['Respect fellow guests', 'Arrive on time'],
+      status: 'approved',
+      isCurated: true,
+      hasHostApproval: gatheringDraft.approvalMode === 'approval'
+    };
+    setEvents((prev) => [newEvent, ...prev]);
+    setSelectedEvent(newEvent);
     navigateTo('create_step4_success');
   };
 
