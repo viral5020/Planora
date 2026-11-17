@@ -1,0 +1,18 @@
+{
+  "short_name": "Planora",
+  "name": "Planora - Social Gathering Platform",
+  "description": "Discover curated real-world gatherings, rooftop vinyl sessions & spontaneous meetups in your city.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0e0f15",
+  "theme_color": "#12131a",
+  "display": "standalone",
+  "orientation": "portrait"
+}
+

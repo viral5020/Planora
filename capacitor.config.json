@@ -1,0 +1,10 @@
+{
+  "appId": "com.planora.app",
+  "appName": "Planora",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
+
