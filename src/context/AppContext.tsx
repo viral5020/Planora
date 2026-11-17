@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ScreenId, EventItem, CommunityItem, PersonItem, GuestRequest, ChatMessage, NotificationItem } from '../types';
 import {
   INITIAL_EVENTS,
@@ -167,7 +167,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setEvents((prev) =>
       prev.map((e) => {
         if (e.id === eventId) {
-          const nextStatus = e.status === 'none' ? 'pending' : e.status === 'pending' ? 'approved' : 'none';
+          const nextStatus: 'none' | 'pending' | 'approved' =
+            e.status === 'none' ? 'pending' : e.status === 'pending' ? 'approved' : 'none';
           const updated = {
             ...e,
             status: nextStatus,
