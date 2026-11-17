@@ -23,6 +23,8 @@ export type ScreenId =
   | 'profile'
   | 'settings_safety'
   | 'become_host'
+  | 'host_login'
+  | 'admin_login'
   | 'admin';
 
 export type EventVerificationStatus = 'pending' | 'approved' | 'rejected';
@@ -70,6 +72,8 @@ export interface HostApplicationItem {
   paymentAmount: number;
   paymentStatus: 'paid' | 'pending';
   paymentReference?: string;
+  hostId?: string;
+  hostPassword?: string;
   status: 'pending' | 'approved' | 'rejected';
   adminNotes?: string;
   createdAt: string;
@@ -107,6 +111,8 @@ export interface PersonItem {
 
 export interface GuestRequest {
   id: string;
+  eventId?: string;
+  eventTitle?: string;
   name: string;
   avatar: string;
   profession: string;

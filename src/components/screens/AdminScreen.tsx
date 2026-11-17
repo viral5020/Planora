@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Save,
   Eye,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react';
 import type { EventItem, HostApplicationItem } from '../../types';
 
@@ -30,7 +31,7 @@ export const AdminScreen: React.FC = () => {
     deleteEvent,
     updateEvent,
     navigateTo,
-    selectedCity
+    logoutAdmin
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'events' | 'hosts'>('events');
@@ -43,7 +44,7 @@ export const AdminScreen: React.FC = () => {
 
   const handleApproveHost = async (id: string) => {
     await approveHostApplication(id);
-    setActionSuccess('Host approved successfully! They can now publish gatherings.');
+    setActionSuccess('Host approved successfully! Their Host ID is now active.');
     setTimeout(() => setActionSuccess(null), 3500);
   };
 
@@ -113,46 +114,56 @@ export const AdminScreen: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full border border-pink-500/20">
-                ADMIN CONSOLE
+                MASTER ADMIN
               </span>
-              <span className="text-[10px] text-gray-400 font-mono">Route: /admin</span>
+              <span className="text-[10px] text-green-400 font-mono">● Authenticated as Admin</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white mt-0.5">Planora Superadmin</h1>
           </div>
         </div>
 
-        {/* Tab Pills with Pending Badges */}
-        <div className="flex bg-[#181924] p-1 rounded-2xl border border-[#27293b]">
-          <button
-            onClick={() => setActiveTab('events')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              activeTab === 'events'
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span>Events Management</span>
-            {pendingEventsCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-pink-500 text-white">
-                {pendingEventsCount}
-              </span>
-            )}
-          </button>
+        <div className="flex items-center gap-3">
+          {/* Tab Pills with Pending Badges */}
+          <div className="flex bg-[#181924] p-1 rounded-2xl border border-[#27293b]">
+            <button
+              onClick={() => setActiveTab('events')}
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                activeTab === 'events'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <span>Events</span>
+              {pendingEventsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-pink-500 text-white">
+                  {pendingEventsCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('hosts')}
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                activeTab === 'hosts'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <span>Host Apps (₹300)</span>
+              {pendingHostsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-amber-500 text-white">
+                  {pendingHostsCount}
+                </span>
+              )}
+            </button>
+          </div>
 
           <button
-            onClick={() => setActiveTab('hosts')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              activeTab === 'hosts'
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            onClick={logoutAdmin}
+            className="py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-semibold flex items-center gap-1 transition"
           >
-            <span>Host Applications (₹300)</span>
-            {pendingHostsCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-amber-500 text-white">
-                {pendingHostsCount}
-              </span>
-            )}
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Log Out</span>
           </button>
         </div>
       </div>
@@ -165,16 +176,14 @@ export const AdminScreen: React.FC = () => {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* TAB 1: HOST APPLICATIONS (₹300)                          */}
-      {/* ======================================================== */}
+      {/* TAB 1: HOST APPLICATIONS (₹300) */}
       {activeTab === 'hosts' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-extrabold text-white">Host Verification Requests</h2>
               <p className="text-xs text-gray-400">
-                Review applicants who paid the ₹300 verification fee. Approving grants them publishing rights.
+                Review applicants who paid ₹300. Approving unlocks their custom Host ID and publishing console.
               </p>
             </div>
             <span className="text-xs font-mono text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">
@@ -187,14 +196,8 @@ export const AdminScreen: React.FC = () => {
               <ShieldAlert className="w-10 h-10 text-gray-500 mx-auto" />
               <h4 className="text-sm font-bold text-white">No Host Applications Yet</h4>
               <p className="text-xs text-gray-400 max-w-sm mx-auto">
-                Users can apply to become a host from their profile or create flow by paying ₹300. Their applications will appear here.
+                Users can apply to become a host from the member side by paying ₹300.
               </p>
-              <button
-                onClick={() => navigateTo('become_host')}
-                className="mt-2 py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white transition"
-              >
-                Test Become a Host Flow
-              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
@@ -227,10 +230,11 @@ export const AdminScreen: React.FC = () => {
                     </p>
 
                     <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 pt-1 font-mono">
-                      <span>Ref: {app.paymentReference || 'PLN_300'}</span>
+                      <span>Host ID: <strong className="text-amber-400">{app.hostId || 'host_pending'}</strong></span>
+                      {app.hostPassword && <span>Pass: <strong className="text-gray-300">{app.hostPassword}</strong></span>}
                       <span>• Fee: ₹{app.paymentAmount} (Paid)</span>
+                      <span>• Ref: {app.paymentReference || 'PLN_300'}</span>
                       {app.phone && <span>• Tel: {app.phone}</span>}
-                      {app.userEmail && <span>• {app.userEmail}</span>}
                     </div>
                   </div>
 
@@ -242,7 +246,7 @@ export const AdminScreen: React.FC = () => {
                         className="py-2 px-3.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-green-600/20 transition"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Approve Host</span>
+                        <span>Approve Host ID</span>
                       </button>
                     )}
 
@@ -263,16 +267,14 @@ export const AdminScreen: React.FC = () => {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* TAB 2: EVENTS MANAGEMENT (EDIT / DELETE / APPROVE)       */}
-      {/* ======================================================== */}
+      {/* TAB 2: EVENTS MANAGEMENT */}
       {activeTab === 'events' && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-extrabold text-white">All Gatherings & Verifications</h2>
               <p className="text-xs text-gray-400">
-                Approve newly published events, edit details, or permanently delete inappropriate entries.
+                Approve newly published events, edit details, or permanently delete entries.
               </p>
             </div>
 
@@ -386,9 +388,7 @@ export const AdminScreen: React.FC = () => {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* MODAL: EDIT EVENT                                        */}
-      {/* ======================================================== */}
+      {/* EDIT MODAL */}
       {editingEvent && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#181924] border border-[#2a2d3e] rounded-3xl p-6 max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
@@ -526,4 +526,3 @@ export const AdminScreen: React.FC = () => {
     </div>
   );
 };
-

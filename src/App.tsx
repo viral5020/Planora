@@ -26,13 +26,15 @@ import { MyEventsScreen } from './components/screens/MyEventsScreen';
 import { ProfileScreen } from './components/screens/ProfileScreen';
 import { SettingsSafetyScreen } from './components/screens/SettingsSafetyScreen';
 import { BecomeHostScreen } from './components/screens/BecomeHostScreen';
+import { HostLoginScreen } from './components/screens/HostLoginScreen';
+import { AdminLoginScreen } from './components/screens/AdminLoginScreen';
 import { AdminScreen } from './components/screens/AdminScreen';
 
-import { Compass, Users, PlusCircle, MessageSquare, User, ShieldAlert } from 'lucide-react';
+import { Compass, Users, PlusCircle, MessageSquare, User, Crown } from 'lucide-react';
 import type { ScreenId } from './types';
 
 const MainScreenRouter: React.FC = () => {
-  const { currentScreen, navigateTo } = useApp();
+  const { currentScreen, navigateTo, isAdminLoggedIn, isHostVerified } = useApp();
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -80,23 +82,30 @@ const MainScreenRouter: React.FC = () => {
         return <SettingsSafetyScreen />;
       case 'become_host':
         return <BecomeHostScreen />;
+      case 'host_login':
+        return <HostLoginScreen />;
+      case 'admin_login':
+        return <AdminLoginScreen />;
       case 'admin':
-        return <AdminScreen />;
+        return isAdminLoggedIn ? <AdminScreen /> : <AdminLoginScreen />;
       default:
         return <HomeScreen />;
     }
   };
 
-  const isFullBleedOnboarding = [
+  // Full-bleed authentication & onboarding pages
+  const isFullBleedScreen = [
     'splash',
     'landing',
     'auth_phone',
     'onboarding_interests',
-    'onboarding_location'
+    'onboarding_location',
+    'host_login',
+    'admin_login'
   ].includes(currentScreen);
 
-  // If viewing admin route, give full clean screen
-  if (currentScreen === 'admin') {
+  // If viewing admin route (and logged in), give full wide console
+  if (currentScreen === 'admin' && isAdminLoggedIn) {
     return (
       <div className="min-h-screen bg-[#0e0f15] text-white flex flex-col font-sans">
         <ProductionTopNavbar />
@@ -107,8 +116,8 @@ const MainScreenRouter: React.FC = () => {
     );
   }
 
-  // If on full bleed onboarding screens, render cleanly centered without sidebar
-  if (isFullBleedOnboarding) {
+  // If on full bleed screens, render centered without sidebar clutter
+  if (isFullBleedScreen) {
     return (
       <div className="min-h-screen bg-[#0e0f15] text-white flex flex-col justify-center items-center p-4">
         <div className="w-full max-w-md bg-[#13141b] rounded-3xl border border-[#20222f] shadow-2xl overflow-hidden min-h-[680px] flex flex-col">
@@ -132,11 +141,15 @@ const MainScreenRouter: React.FC = () => {
     { id: 'home', label: 'Explore', icon: <Compass className="w-5 h-5" /> },
     { id: 'people', label: 'People', icon: <Users className="w-5 h-5" /> },
     {
-      id: 'create_step1_type',
-      label: 'Host',
+      id: isHostVerified ? 'create_step1_type' : 'become_host',
+      label: isHostVerified ? 'Host' : 'Be Host',
       icon: (
         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/40 transform -translate-y-2">
-          <PlusCircle className="w-5 h-5 stroke-[2.4]" />
+          {isHostVerified ? (
+            <PlusCircle className="w-5 h-5 stroke-[2.4]" />
+          ) : (
+            <Crown className="w-5 h-5 text-amber-300" />
+          )}
         </div>
       )
     },
@@ -146,7 +159,7 @@ const MainScreenRouter: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0e0f15] text-white flex flex-col font-sans selection:bg-purple-500 selection:text-white">
-      {/* Real Production Top Bar */}
+      {/* Real Production Top Bar (User only, no admin button) */}
       <ProductionTopNavbar />
 
       {/* Main Full-App Layout */}
@@ -168,7 +181,7 @@ const MainScreenRouter: React.FC = () => {
 
         {/* Mobile Native-Style Bottom Navigation Bar */}
         {showBottomNavOnMobile && (
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#14151e]/95 backdrop-blur-2xl border-t border-[#232535] px-4 py-2 flex justify-around items-center z-40 shadow-2xl">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#141520]/95 backdrop-blur-2xl border-t border-[#232535] px-4 py-2 flex justify-around items-center z-40 shadow-2xl">
             {mobileNavItems.map((item) => {
               const isActive = currentScreen === item.id;
               return (

@@ -12,7 +12,6 @@ import type {
 } from '../types';
 import { supabase } from '../lib/supabase';
 
-// ─── Check if Supabase is configured ───────────────────────────────────────────
 const SUPABASE_CONFIGURED =
   import.meta.env.VITE_SUPABASE_URL &&
   import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
@@ -29,15 +28,25 @@ interface AppContextType {
   viewMode: 'desktop' | 'mobile_sim' | 'responsive';
   setViewMode: (mode: 'desktop' | 'mobile_sim' | 'responsive') => void;
 
-  // Auth & Host verification
+  // Normal User Auth
   userId: string | null;
   userEmail: string | null;
   userProfile: { name: string; handle: string; avatar: string } | null;
-  userRole: 'user' | 'host' | 'admin';
-  hostStatus: HostStatus;
-  isHostVerified: boolean;
   logout: () => Promise<void>;
-  applyForHost: (category: string, experienceBio: string, paymentRef: string) => Promise<void>;
+
+  // Host Portal Authentication
+  isHostLoggedIn: boolean;
+  activeHostId: string | null;
+  isHostVerified: boolean;
+  hostStatus: HostStatus;
+  loginAsHost: (hostId: string, pass: string) => boolean;
+  logoutHost: () => void;
+  applyForHost: (category: string, experienceBio: string, paymentRef: string, chosenHostId: string, chosenPass: string) => Promise<void>;
+
+  // Admin Portal Authentication
+  isAdminLoggedIn: boolean;
+  loginAsAdmin: (user: string, pass: string) => boolean;
+  logoutAdmin: () => void;
 
   // Onboarding state
   userPhone: string;
@@ -110,18 +119,20 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Sync initial route if user hits /admin directly
-  const initialScreen: ScreenId =
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-      ? 'admin'
-      : 'home';
+  // Check if initial route is /admin
+  const isDirectAdminUrl =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>(initialScreen);
-  const [screenHistory, setScreenHistory] = useState<ScreenId[]>([initialScreen]);
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>(
+    isDirectAdminUrl ? 'admin_login' : 'home'
+  );
+  const [screenHistory, setScreenHistory] = useState<ScreenId[]>([
+    isDirectAdminUrl ? 'admin_login' : 'home'
+  ]);
   const [deviceViewMode, setDeviceViewMode] = useState<'mobile' | 'expanded'>('expanded');
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile_sim' | 'responsive'>('desktop');
 
-  // Auth state
+  // Normal User state
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ name: string; handle: string; avatar: string } | null>({
@@ -129,9 +140,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     handle: '@aarav_surat',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
   });
-  const [userRole, setUserRole] = useState<'user' | 'host' | 'admin'>('admin');
-  const [hostStatus, setHostStatus] = useState<HostStatus>('none');
+
+  // Host State
+  const [isHostLoggedIn, setIsHostLoggedIn] = useState(false);
+  const [activeHostId, setActiveHostId] = useState<string | null>(null);
   const [isHostVerified, setIsHostVerified] = useState<boolean>(false);
+  const [hostStatus, setHostStatus] = useState<HostStatus>('none');
+
+  // Admin State (password: 12345678, user: admin)
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
 
   // Onboarding
   const [userPhone, setUserPhone] = useState('+91 94026 12345');
@@ -143,14 +160,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   ]);
   const [selectedCity, setSelectedCity] = useState('Surat');
 
-  // Data states (Real Supabase data, no mockData dependency)
+  // Data states
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [selectedEvent, setSelectedEventState] = useState<EventItem | null>(null);
   const [communities, setCommunities] = useState<CommunityItem[]>([]);
   const [selectedCommunity, setSelectedCommunityState] = useState<CommunityItem | null>(null);
   const [people, setPeople] = useState<PersonItem[]>([]);
-  const [hostApplications, setHostApplications] = useState<HostApplicationItem[]>([]);
+  const [hostApplications, setHostApplications] = useState<HostApplicationItem[]>([
+    {
+      id: 'app-preset-1',
+      userName: 'Aakash Verma',
+      userEmail: 'aakash@vinyl.in',
+      phone: '+91 98251 44211',
+      category: 'Music & Rooftops',
+      experienceBio: 'Host of Midnight Vinyl sessions on rooftop venues across Surat.',
+      paymentAmount: 300,
+      paymentStatus: 'paid',
+      paymentReference: 'PLN_PAY_883412',
+      hostId: 'host_surat',
+      hostPassword: 'host123',
+      status: 'approved',
+      createdAt: new Date().toISOString()
+    }
+  ]);
 
   // Gathering draft
   const [gatheringDraft, setGatheringDraft] = useState({
@@ -166,7 +199,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     icebreakers: true
   });
 
-  const [guestRequests, setGuestRequests] = useState<GuestRequest[]>([]);
+  const [guestRequests, setGuestRequests] = useState<GuestRequest[]>([
+    {
+      id: 'g-1',
+      name: 'Rohan Mehta',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+      profession: 'Product Designer',
+      timeAgo: '10m ago',
+      mutualCount: 3,
+      note: 'Love vinyl sessions and analog mixers! Would love to attend this weekend.',
+      status: 'pending'
+    },
+    {
+      id: 'g-2',
+      name: 'Pooja Patel',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+      profession: 'Architect',
+      timeAgo: '1h ago',
+      mutualCount: 5,
+      note: 'Coming with 1 friend. Big fan of Spanish tapas & terrace evenings.',
+      status: 'pending'
+    }
+  ]);
+
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -179,25 +234,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     whatsappUpdates: true
   });
 
-  // ─── Browser URL Navigation Listener (/admin support) ───────────────────────
+  // Browser Navigation Listener (/admin url support)
   useEffect(() => {
     const handlePopState = () => {
       if (window.location.pathname.startsWith('/admin')) {
-        setCurrentScreen('admin');
+        setCurrentScreen(isAdminLoggedIn ? 'admin' : 'admin_login');
       } else if (window.location.pathname === '/' || window.location.pathname === '') {
         setCurrentScreen('home');
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [isAdminLoggedIn]);
 
-  // Update browser URL on screen changes
   const navigateTo = (screen: ScreenId) => {
+    // If trying to access /admin and not logged in as admin, show admin login
+    if (screen === 'admin' && !isAdminLoggedIn) {
+      screen = 'admin_login';
+    }
+
     setScreenHistory((prev) => [...prev, screen]);
     setCurrentScreen(screen);
+
     if (typeof window !== 'undefined') {
-      if (screen === 'admin') {
+      if (screen === 'admin' || screen === 'admin_login') {
         window.history.pushState(null, '', '/admin');
       } else if (window.location.pathname.startsWith('/admin')) {
         window.history.pushState(null, '', '/');
@@ -217,71 +277,201 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // ─── Supabase: Auth listener & Profile Sync ─────────────────────────────────
-  useEffect(() => {
-    if (!SUPABASE_CONFIGURED) return;
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        setUserEmail(session.user.email ?? null);
-        loadUserProfile(session.user);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        setUserEmail(session.user.email ?? null);
-        loadUserProfile(session.user);
-      } else {
-        setUserId(null);
-        setUserEmail(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const loadUserProfile = async (user: any) => {
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (data) {
-        setUserProfile({
-          name: data.name || user.email?.split('@')[0] || 'Planora Member',
-          handle: data.handle || `@${(data.name || 'member').toLowerCase().replace(/\s+/g, '_')}`,
-          avatar: data.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-        });
-        if (data.is_verified_host || data.host_status === 'approved') {
-          setIsHostVerified(true);
-          setHostStatus('approved');
-        } else if (data.host_status === 'pending') {
-          setHostStatus('pending');
-        }
-        if (data.role) setUserRole(data.role);
-      }
-    } catch (e) {
-      console.warn('Could not load user profile from Supabase:', e);
+  // ─── ADMIN LOGIN HANDLER ───────────────────────────────────────────────────
+  const loginAsAdmin = (user: string, pass: string): boolean => {
+    if (user.toLowerCase() === 'admin' && pass === '12345678') {
+      setIsAdminLoggedIn(true);
+      return true;
     }
+    return false;
   };
 
-  const logout = async () => {
-    if (SUPABASE_CONFIGURED) {
-      await supabase.auth.signOut();
+  const logoutAdmin = () => {
+    setIsAdminLoggedIn(false);
+    navigateTo('home');
+  };
+
+  // ─── HOST LOGIN HANDLER ────────────────────────────────────────────────────
+  const loginAsHost = (hostIdInput: string, passInput: string): boolean => {
+    // Check preset or registered host applications
+    const match = hostApplications.find(
+      (a) =>
+        a.hostId?.toLowerCase() === hostIdInput.toLowerCase() &&
+        a.hostPassword === passInput &&
+        a.status === 'approved'
+    );
+
+    // Also support demo preset: host_surat / host123
+    if (
+      match ||
+      (hostIdInput.toLowerCase() === 'host_surat' && passInput === 'host123')
+    ) {
+      setIsHostLoggedIn(true);
+      setIsHostVerified(true);
+      setActiveHostId(hostIdInput);
+      setHostStatus('approved');
+      return true;
     }
-    setUserId(null);
-    setUserEmail(null);
+    return false;
+  };
+
+  const logoutHost = () => {
+    setIsHostLoggedIn(false);
     setIsHostVerified(false);
-    setHostStatus('none');
-    navigateTo('landing');
+    setActiveHostId(null);
+    navigateTo('home');
   };
 
-  // ─── Supabase: Fetch Real Events (Filtered by City & Approval) ─────────────
+  // ─── BECOME HOST APPLY (₹300) ──────────────────────────────────────────────
+  const applyForHost = async (
+    category: string,
+    experienceBio: string,
+    paymentRef: string,
+    chosenHostId: string,
+    chosenPass: string
+  ) => {
+    const applicantName = userProfile?.name || 'Aarav Mehta';
+    const applicantPhone = userPhone || '+91 94026 12345';
+
+    const newApp: HostApplicationItem = {
+      id: `app-${Date.now()}`,
+      userId: userId || undefined,
+      userName: applicantName,
+      userEmail: userEmail || 'aarav@surat.in',
+      phone: applicantPhone,
+      category,
+      experienceBio,
+      paymentAmount: 300,
+      paymentStatus: 'paid',
+      paymentReference: paymentRef,
+      hostId: chosenHostId,
+      hostPassword: chosenPass,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    if (SUPABASE_CONFIGURED) {
+      try {
+        const { data, error } = await supabase.from('host_applications').insert({
+          user_id: userId || null,
+          user_name: applicantName,
+          user_email: userEmail || 'aarav@surat.in',
+          phone: applicantPhone,
+          category,
+          experience_bio: experienceBio,
+          payment_amount: 300,
+          payment_status: 'paid',
+          payment_reference: paymentRef,
+          status: 'pending'
+        }).select().single();
+
+        if (data) {
+          newApp.id = data.id;
+        }
+      } catch (e) {
+        console.warn('Could not insert application to Supabase, saving to state:', e);
+      }
+    }
+
+    setHostApplications((prev) => [newApp, ...prev]);
+    setHostStatus('pending');
+  };
+
+  // ─── ADMIN ACTIONS ─────────────────────────────────────────────────────────
+  const approveHostApplication = async (appId: string) => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase
+        .from('host_applications')
+        .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+        .eq('id', appId);
+
+      const app = hostApplications.find((a) => a.id === appId);
+      if (app?.userId) {
+        await supabase
+          .from('profiles')
+          .update({ is_verified_host: true, host_status: 'approved', role: 'host' })
+          .eq('id', app.userId);
+      }
+    }
+
+    setHostApplications((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, status: 'approved' as const } : a))
+    );
+  };
+
+  const rejectHostApplication = async (appId: string, reason?: string) => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase
+        .from('host_applications')
+        .update({ status: 'rejected', admin_notes: reason, reviewed_at: new Date().toISOString() })
+        .eq('id', appId);
+    }
+    setHostApplications((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, status: 'rejected' as const, adminNotes: reason } : a))
+    );
+  };
+
+  const approveEvent = async (eventId: string) => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase
+        .from('events')
+        .update({ verification_status: 'approved' })
+        .eq('id', eventId);
+    }
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, verificationStatus: 'approved' as const } : e))
+    );
+  };
+
+  const rejectEvent = async (eventId: string, reason?: string) => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase
+        .from('events')
+        .update({ verification_status: 'rejected', rejection_reason: reason })
+        .eq('id', eventId);
+    }
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === eventId
+          ? { ...e, verificationStatus: 'rejected' as const, rejectionReason: reason }
+          : e
+      )
+    );
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase.from('events').delete().eq('id', eventId);
+    }
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    if (selectedEvent?.id === eventId) {
+      setSelectedEventState(null);
+    }
+  };
+
+  const updateEvent = async (eventId: string, updates: Partial<EventItem>) => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase
+        .from('events')
+        .update({
+          title: updates.title,
+          category: updates.category,
+          venue: updates.venue,
+          date: updates.date,
+          time: updates.time,
+          price: updates.price,
+          total_capacity: updates.totalCapacity,
+          vibe_description: updates.vibeDescription,
+          city: updates.city
+        })
+        .eq('id', eventId);
+    }
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, ...updates } : e))
+    );
+  };
+
+  // ─── Supabase Data Fetching ────────────────────────────────────────────────
   const fetchEvents = async () => {
     if (!SUPABASE_CONFIGURED) return;
     setEventsLoading(true);
@@ -293,7 +483,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (error) throw error;
 
-      if (data) {
+      if (data && data.length > 0) {
         const mapped: EventItem[] = data.map((e: any) => ({
           id: e.id,
           title: e.title,
@@ -337,7 +527,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // ─── Supabase: Fetch Real Communities ──────────────────────────────────────
   const fetchCommunities = async () => {
     if (!SUPABASE_CONFIGURED) return;
     try {
@@ -370,191 +559,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // ─── Supabase: Fetch Host Applications (for /admin) ─────────────────────────
-  const fetchHostApplications = async () => {
-    if (!SUPABASE_CONFIGURED) return;
-    try {
-      const { data, error } = await supabase
-        .from('host_applications')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error && data) {
-        setHostApplications(data.map((a: any) => ({
-          id: a.id,
-          userId: a.user_id,
-          userName: a.user_name,
-          userEmail: a.user_email,
-          phone: a.phone,
-          category: a.category,
-          experienceBio: a.experience_bio,
-          paymentAmount: a.payment_amount || 300,
-          paymentStatus: a.payment_status || 'paid',
-          paymentReference: a.payment_reference,
-          status: a.status || 'pending',
-          adminNotes: a.admin_notes,
-          createdAt: a.created_at
-        })));
-      }
-    } catch (err) {
-      console.warn('[Planora] Host applications fetch error:', err);
-    }
-  };
-
   useEffect(() => {
     fetchEvents();
     fetchCommunities();
-    fetchHostApplications();
   }, [selectedCity]);
 
-  // ─── Become Host: Submit application + ₹300 fee ─────────────────────────────
-  const applyForHost = async (category: string, experienceBio: string, paymentRef: string) => {
-    const applicantName = userProfile?.name || 'Aarav Mehta';
-    const applicantPhone = userPhone || '+91 94026 12345';
-
-    if (SUPABASE_CONFIGURED) {
-      try {
-        const { data, error } = await supabase.from('host_applications').insert({
-          user_id: userId || null,
-          user_name: applicantName,
-          user_email: userEmail || 'aarav@surat.in',
-          phone: applicantPhone,
-          category,
-          experience_bio: experienceBio,
-          payment_amount: 300,
-          payment_status: 'paid',
-          payment_reference: paymentRef,
-          status: 'pending'
-        }).select().single();
-
-        if (error) {
-          console.warn('[Planora] Error submitting host application to Supabase:', error);
-        } else if (data) {
-          setHostApplications((prev) => [{
-            id: data.id,
-            userId: data.user_id,
-            userName: data.user_name,
-            userEmail: data.user_email,
-            phone: data.phone,
-            category: data.category,
-            experienceBio: data.experience_bio,
-            paymentAmount: data.payment_amount,
-            paymentStatus: data.payment_status,
-            paymentReference: data.payment_reference,
-            status: 'pending',
-            createdAt: data.created_at
-          }, ...prev]);
-        }
-      } catch (e) {
-        console.warn('Host application error:', e);
+  // Auth state listener
+  useEffect(() => {
+    if (!SUPABASE_CONFIGURED) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        setUserEmail(session.user.email ?? null);
       }
-    }
+    });
 
-    setHostStatus('pending');
-  };
-
-  // ─── Admin Action: Approve Host Application ─────────────────────────────────
-  const approveHostApplication = async (appId: string) => {
-    if (SUPABASE_CONFIGURED) {
-      await supabase
-        .from('host_applications')
-        .update({ status: 'approved', reviewed_at: new Date().toISOString() })
-        .eq('id', appId);
-
-      const app = hostApplications.find((a) => a.id === appId);
-      if (app && app.userId) {
-        await supabase
-          .from('profiles')
-          .update({ is_verified_host: true, host_status: 'approved', role: 'host' })
-          .eq('id', app.userId);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        setUserEmail(session.user.email ?? null);
+      } else {
+        setUserId(null);
+        setUserEmail(null);
       }
-    }
+    });
 
-    setHostApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, status: 'approved' as const } : a))
-    );
-    setIsHostVerified(true);
-    setHostStatus('approved');
-  };
+    return () => subscription.unsubscribe();
+  }, []);
 
-  // ─── Admin Action: Reject Host Application ─────────────────────────────────
-  const rejectHostApplication = async (appId: string, reason?: string) => {
+  const logout = async () => {
     if (SUPABASE_CONFIGURED) {
-      await supabase
-        .from('host_applications')
-        .update({ status: 'rejected', admin_notes: reason, reviewed_at: new Date().toISOString() })
-        .eq('id', appId);
+      await supabase.auth.signOut();
     }
-    setHostApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, status: 'rejected' as const, adminNotes: reason } : a))
-    );
+    setUserId(null);
+    setUserEmail(null);
+    navigateTo('landing');
   };
 
-  // ─── Admin Action: Approve Event ───────────────────────────────────────────
-  const approveEvent = async (eventId: string) => {
-    if (SUPABASE_CONFIGURED) {
-      await supabase
-        .from('events')
-        .update({ verification_status: 'approved' })
-        .eq('id', eventId);
-    }
-    setEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, verificationStatus: 'approved' as const } : e))
-    );
-  };
-
-  // ─── Admin Action: Reject Event ────────────────────────────────────────────
-  const rejectEvent = async (eventId: string, reason?: string) => {
-    if (SUPABASE_CONFIGURED) {
-      await supabase
-        .from('events')
-        .update({ verification_status: 'rejected', rejection_reason: reason })
-        .eq('id', eventId);
-    }
-    setEvents((prev) =>
-      prev.map((e) =>
-        e.id === eventId
-          ? { ...e, verificationStatus: 'rejected' as const, rejectionReason: reason }
-          : e
-      )
-    );
-  };
-
-  // ─── Admin Action: Delete Event ────────────────────────────────────────────
-  const deleteEvent = async (eventId: string) => {
-    if (SUPABASE_CONFIGURED) {
-      await supabase.from('events').delete().eq('id', eventId);
-    }
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    if (selectedEvent?.id === eventId) {
-      setSelectedEventState(null);
-    }
-  };
-
-  // ─── Admin Action: Update Event Details ────────────────────────────────────
-  const updateEvent = async (eventId: string, updates: Partial<EventItem>) => {
-    if (SUPABASE_CONFIGURED) {
-      await supabase
-        .from('events')
-        .update({
-          title: updates.title,
-          category: updates.category,
-          venue: updates.venue,
-          date: updates.date,
-          time: updates.time,
-          price: updates.price,
-          total_capacity: updates.totalCapacity,
-          vibe_description: updates.vibeDescription,
-          city: updates.city
-        })
-        .eq('id', eventId);
-    }
-    setEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, ...updates } : e))
-    );
-  };
-
-  // ─── Host Flow: Publish Event Draft (Queued for Verification) ──────────────
   const publishGatheringDraft = async () => {
     const isCuratedApproval = gatheringDraft.approvalMode === 'approval';
 
@@ -577,7 +618,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           rules: ['Respect fellow guests', 'Arrive on time'],
           is_curated: true,
           has_host_approval: isCuratedApproval,
-          verification_status: 'pending' // Requires admin verification
+          verification_status: 'pending'
         }).select().single();
 
         if (!error && data) {
@@ -594,8 +635,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             totalCapacity: data.total_capacity,
             attendingCount: data.attending_count,
             host: {
-              name: userProfile?.name ?? 'Aarav Mehta',
-              handle: userProfile?.handle ?? '@aarav_surat',
+              name: userProfile?.name ?? 'Host',
+              handle: userProfile?.handle ?? '@host',
               avatar: userProfile?.avatar ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
               rating: 4.9,
               badge: 'Verified Host',
@@ -618,7 +659,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
 
-    // Local fallback
     const newEvent: EventItem = {
       id: `gathering-${Date.now()}`,
       title: gatheringDraft.title || 'New Gathering',
@@ -708,7 +748,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const resetDemo = () => {
     fetchEvents();
     fetchCommunities();
-    fetchHostApplications();
     setCurrentScreen('home');
     setScreenHistory(['home']);
   };
@@ -730,11 +769,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         userId,
         userEmail,
         userProfile,
-        userRole,
-        hostStatus,
-        isHostVerified,
         logout,
+        isHostLoggedIn,
+        activeHostId,
+        isHostVerified,
+        hostStatus,
+        loginAsHost,
+        logoutHost,
         applyForHost,
+        isAdminLoggedIn,
+        loginAsAdmin,
+        logoutAdmin,
         userPhone,
         setUserPhone,
         otpCode,

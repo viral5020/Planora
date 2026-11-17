@@ -12,8 +12,7 @@ import {
   Sparkles,
   LogOut,
   LogIn,
-  Crown,
-  ShieldAlert
+  Crown
 } from 'lucide-react';
 import type { ScreenId } from '../../types';
 
@@ -26,16 +25,11 @@ export const DesktopSidebar: React.FC = () => {
     userProfile,
     userId,
     logout,
-    isHostVerified,
-    hostApplications,
-    events
+    isHostVerified
   } = useApp();
 
   const pendingRequestsCount = guestRequests.filter((g) => g.status === 'pending').length;
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const pendingAdminCount =
-    hostApplications.filter((h) => h.status === 'pending').length +
-    events.filter((e) => e.verificationStatus === 'pending').length;
 
   const navLinks: Array<{
     id: ScreenId;
@@ -58,13 +52,23 @@ export const DesktopSidebar: React.FC = () => {
       badge: isHostVerified ? undefined : 300,
       badgeColor: 'bg-gradient-to-r from-amber-500 to-pink-500'
     },
-    {
-      id: 'host_management',
-      label: 'Host Management',
-      icon: <ShieldCheck className="w-4 h-4" />,
-      badge: pendingRequestsCount,
-      badgeColor: 'bg-pink-500'
-    },
+    ...(isHostVerified
+      ? [
+          {
+            id: 'host_management' as ScreenId,
+            label: 'Host Management',
+            icon: <ShieldCheck className="w-4 h-4" />,
+            badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
+            badgeColor: 'bg-pink-500'
+          }
+        ]
+      : [
+          {
+            id: 'host_login' as ScreenId,
+            label: 'Host Login',
+            icon: <Crown className="w-4 h-4 text-amber-400" />
+          }
+        ]),
     {
       id: 'inbox',
       label: 'Messages & Chat',
@@ -74,15 +78,8 @@ export const DesktopSidebar: React.FC = () => {
       id: 'notifications',
       label: 'Notifications',
       icon: <Sparkles className="w-4 h-4" />,
-      badge: unreadCount,
+      badge: unreadCount > 0 ? unreadCount : undefined,
       badgeColor: 'bg-purple-500'
-    },
-    {
-      id: 'admin',
-      label: 'Admin Console (/admin)',
-      icon: <ShieldAlert className="w-4 h-4 text-pink-400" />,
-      badge: pendingAdminCount > 0 ? pendingAdminCount : undefined,
-      badgeColor: 'bg-pink-600'
     },
     { id: 'profile', label: 'My Profile & Passes', icon: <User className="w-4 h-4" /> },
     { id: 'settings_safety', label: 'Settings & Safety', icon: <Settings className="w-4 h-4" /> }
@@ -165,7 +162,7 @@ export const DesktopSidebar: React.FC = () => {
                   {name}
                 </h4>
                 {isHostVerified && (
-                  <span className="px-1 rounded text-[8px] font-bold bg-purple-500/30 text-purple-300">
+                  <span className="px-1 rounded text-[8px] font-bold bg-amber-500/30 text-amber-300">
                     HOST
                   </span>
                 )}

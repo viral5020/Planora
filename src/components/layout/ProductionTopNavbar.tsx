@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Search, Bell, MapPin, ChevronDown, LogIn, LogOut, ShieldAlert, Crown } from 'lucide-react';
+import { Search, Bell, MapPin, ChevronDown, LogIn, LogOut, Crown } from 'lucide-react';
 
 export const ProductionTopNavbar: React.FC = () => {
   const {
@@ -109,26 +109,24 @@ export const ProductionTopNavbar: React.FC = () => {
           )}
         </div>
 
-        {/* Right Actions: Admin Link, City, Notifications & User Avatar */}
+        {/* Right Actions: Clean user-only interface (NO /admin displayed here) */}
         <div className="flex items-center gap-2.5 shrink-0">
-          {/* Quick Admin Console Button */}
-          <button
-            onClick={() => navigateTo('admin')}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-pink-600/20 to-purple-600/20 hover:from-pink-600/30 hover:to-purple-600/30 border border-pink-500/30 text-pink-300 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm"
-            title="Open Superadmin Console"
-          >
-            <ShieldAlert className="w-3.5 h-3.5 text-pink-400" />
-            <span className="hidden sm:inline">/admin</span>
-          </button>
-
           {/* Become Host Banner Pill if not verified */}
-          {!isHostVerified && (
+          {!isHostVerified ? (
             <button
               onClick={() => navigateTo('become_host')}
-              className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold transition"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold transition"
             >
               <Crown className="w-3.5 h-3.5 text-amber-400" />
-              <span>Host (₹300)</span>
+              <span>Become a Host</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => navigateTo('host_management')}
+              className="flex items-center gap-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 px-3 py-1.5 rounded-xl text-xs font-bold transition"
+            >
+              <Crown className="w-3.5 h-3.5 text-purple-400" />
+              <span>Host Panel</span>
             </button>
           )}
 
@@ -183,7 +181,7 @@ export const ProductionTopNavbar: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-bold text-white truncate">{userProfile?.name || 'Member'}</p>
                       {isHostVerified && (
-                        <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                           HOST
                         </span>
                       )}
@@ -201,27 +199,28 @@ export const ProductionTopNavbar: React.FC = () => {
                     View Profile
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigateTo('become_host');
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-500/10 transition flex items-center justify-between"
-                  >
-                    <span>Become a Host</span>
-                    <span className="text-[9px] font-bold bg-amber-500/20 px-1.5 py-0.5 rounded">₹300</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigateTo('admin');
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs text-pink-300 hover:bg-pink-500/10 transition flex items-center gap-1.5"
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>Admin Panel (/admin)</span>
-                  </button>
+                  {!isHostVerified ? (
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        navigateTo('become_host');
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-500/10 transition flex items-center justify-between"
+                    >
+                      <span>Become a Host</span>
+                      <span className="text-[9px] font-bold bg-amber-500/20 px-1.5 py-0.5 rounded">₹300</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        navigateTo('host_management');
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs text-purple-300 hover:bg-purple-500/10 transition"
+                    >
+                      Host Management Console
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {

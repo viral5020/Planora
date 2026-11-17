@@ -10,18 +10,23 @@ import {
   AlertCircle,
   CreditCard,
   Building,
-  Check
+  Check,
+  Key,
+  User,
+  Crown
 } from 'lucide-react';
 
 export const BecomeHostScreen: React.FC = () => {
   const { goBack, navigateTo, isHostVerified, hostStatus, applyForHost, userProfile, userPhone } = useApp();
 
-  const [step, setStep] = useState<'info' | 'form' | 'payment' | 'done'>(
+  const [step, setStep] = useState<'info' | 'form' | 'credentials' | 'payment' | 'done'>(
     isHostVerified ? 'done' : hostStatus === 'pending' ? 'done' : 'info'
   );
 
   const [category, setCategory] = useState('Music & Rooftops');
   const [experienceBio, setExperienceBio] = useState('');
+  const [hostId, setHostId] = useState(`host_${(userProfile?.name || 'surat').toLowerCase().replace(/\s+/g, '_')}`);
+  const [hostPassword, setHostPassword] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
   const [upiId, setUpiId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,10 +40,24 @@ export const BecomeHostScreen: React.FC = () => {
     'Tech, Design & Founders'
   ];
 
-  const handleProceedToPayment = (e: React.FormEvent) => {
+  const handleProceedToCredentials = (e: React.FormEvent) => {
     e.preventDefault();
     if (!experienceBio.trim()) {
       setErrorMsg('Please tell us a bit about what kind of gatherings you plan to host.');
+      return;
+    }
+    setErrorMsg(null);
+    setStep('credentials');
+  };
+
+  const handleProceedToPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hostId.trim() || !hostPassword.trim()) {
+      setErrorMsg('Please specify both a Host ID and Password to manage your host panel.');
+      return;
+    }
+    if (hostPassword.length < 6) {
+      setErrorMsg('Password should be at least 6 characters.');
       return;
     }
     setErrorMsg(null);
@@ -51,7 +70,7 @@ export const BecomeHostScreen: React.FC = () => {
 
     try {
       const paymentRef = `PLN_PAY_${Date.now().toString().slice(-6)}`;
-      await applyForHost(category, experienceBio, paymentRef);
+      await applyForHost(category, experienceBio, paymentRef, hostId.trim(), hostPassword.trim());
       setStep('done');
     } catch (err: any) {
       setErrorMsg(err.message || 'Payment processing failed. Please try again.');
@@ -103,7 +122,7 @@ export const BecomeHostScreen: React.FC = () => {
                   <span className="text-xs text-gray-400 font-mono">/ lifetime</span>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">
-                  Covers host identity screening, manual vetting & verification badge.
+                  Covers host screening, manual vetting, custom Host ID & verification badge.
                 </p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
@@ -121,8 +140,8 @@ export const BecomeHostScreen: React.FC = () => {
                 <div className="bg-[#181924] p-3 rounded-2xl border border-[#27293b] flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="text-xs font-bold text-white">Publish Public Gatherings</h5>
-                    <p className="text-[10px] text-gray-400">Your events appear on the city-wide radar & feed.</p>
+                    <h5 className="text-xs font-bold text-white">Dedicated Host Panel</h5>
+                    <p className="text-[10px] text-gray-400">Manage attendees, view stats & accept guest requests.</p>
                   </div>
                 </div>
 
@@ -130,7 +149,7 @@ export const BecomeHostScreen: React.FC = () => {
                   <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
                   <div>
                     <h5 className="text-xs font-bold text-white">Guest Curation & Approval</h5>
-                    <p className="text-[10px] text-gray-400">Screen guest profiles, accept or decline RSVPs.</p>
+                    <p className="text-[10px] text-gray-400">Screen attendee profiles, accept or decline tickets.</p>
                   </div>
                 </div>
 
@@ -152,22 +171,33 @@ export const BecomeHostScreen: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => setStep('form')}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white font-bold text-sm shadow-xl shadow-purple-600/30 hover:brightness-110 active:scale-[0.98] transition flex items-center justify-center gap-2"
-            >
-              <span>Continue Application</span>
-              <Sparkles className="w-4 h-4" />
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => setStep('form')}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white font-bold text-sm shadow-xl shadow-purple-600/30 hover:brightness-110 active:scale-[0.98] transition flex items-center justify-center gap-2"
+              >
+                <span>Continue Application & Create Host ID</span>
+                <Sparkles className="w-4 h-4" />
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => navigateTo('host_login')}
+                  className="text-xs text-amber-400 font-semibold hover:underline"
+                >
+                  Already have a Host ID? Login to Host Panel →
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* STEP 2: APPLICATION FORM */}
+        {/* STEP 2: EXPERIENCE DETAILS */}
         {step === 'form' && (
-          <form onSubmit={handleProceedToPayment} className="space-y-4">
+          <form onSubmit={handleProceedToCredentials} className="space-y-4">
             <div>
-              <h3 className="text-xl font-black text-white">Host Details</h3>
-              <p className="text-xs text-gray-400">Tell us what kind of experiences you want to bring to Planora.</p>
+              <h3 className="text-xl font-black text-white">1. Host Experience</h3>
+              <p className="text-xs text-gray-400">Tell us what kind of gatherings you plan to organize.</p>
             </div>
 
             {errorMsg && (
@@ -206,11 +236,6 @@ export const BecomeHostScreen: React.FC = () => {
               />
             </div>
 
-            <div className="bg-[#181924] p-3.5 rounded-2xl border border-[#292b3c] flex items-center justify-between text-xs">
-              <span className="text-gray-400">Applicant:</span>
-              <span className="font-bold text-white">{userProfile?.name || 'Aarav Mehta'} ({userPhone || '+91 94026 12345'})</span>
-            </div>
-
             <div className="pt-2 flex gap-3">
               <button
                 type="button"
@@ -223,18 +248,85 @@ export const BecomeHostScreen: React.FC = () => {
                 type="submit"
                 className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-purple-600/30 hover:brightness-110 active:scale-[0.98] transition"
               >
-                Proceed to Verification Payment (₹300)
+                Next: Create Host Login ID →
               </button>
             </div>
           </form>
         )}
 
-        {/* STEP 3: PAYMENT SCREEN (₹300) */}
+        {/* STEP 3: CREATE HOST LOGIN CREDENTIALS */}
+        {step === 'credentials' && (
+          <form onSubmit={handleProceedToPayment} className="space-y-4">
+            <div>
+              <h3 className="text-xl font-black text-white">2. Create Host Login Credentials</h3>
+              <p className="text-xs text-gray-400">
+                You will use this custom Host ID and Password to sign in to your dedicated Host Management Panel.
+              </p>
+            </div>
+
+            {errorMsg && (
+              <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium text-gray-300">Choose your Host ID / Username</label>
+              <div className="flex items-center gap-2 bg-[#1b1c28] border border-[#2d2f44] rounded-2xl p-3 focus-within:border-purple-500 transition">
+                <User className="w-4 h-4 text-purple-400 shrink-0" />
+                <input
+                  type="text"
+                  required
+                  value={hostId}
+                  onChange={(e) => setHostId(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="e.g. host_surat_acoustic"
+                  className="bg-transparent text-sm text-white focus:outline-none flex-1 font-mono text-xs"
+                />
+              </div>
+              <p className="text-[10px] text-gray-400">Unique identifier for your host console.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium text-gray-300">Create Host Password</label>
+              <div className="flex items-center gap-2 bg-[#1b1c28] border border-[#2d2f44] rounded-2xl p-3 focus-within:border-purple-500 transition">
+                <Key className="w-4 h-4 text-purple-400 shrink-0" />
+                <input
+                  type="password"
+                  required
+                  value={hostPassword}
+                  onChange={(e) => setHostPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="bg-transparent text-sm text-white focus:outline-none flex-1 font-mono"
+                />
+              </div>
+              <p className="text-[10px] text-gray-400">Minimum 6 characters.</p>
+            </div>
+
+            <div className="pt-2 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setStep('form')}
+                className="py-3.5 px-4 rounded-2xl bg-[#1b1c28] border border-[#2d2f44] text-xs font-semibold text-gray-300 hover:text-white transition"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-purple-600/30 hover:brightness-110 active:scale-[0.98] transition"
+              >
+                Next: Proceed to Payment (₹300) →
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* STEP 4: PAYMENT SCREEN (₹300) */}
         {step === 'payment' && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-xl font-black text-white">Verification Payment</h3>
-              <p className="text-xs text-gray-400">Complete ₹300 one-time fee to submit your host credentials.</p>
+              <h3 className="text-xl font-black text-white">3. Verification Payment</h3>
+              <p className="text-xs text-gray-400">Complete ₹300 one-time fee to register your Host ID.</p>
             </div>
 
             {errorMsg && (
@@ -247,12 +339,12 @@ export const BecomeHostScreen: React.FC = () => {
             {/* Payment Summary Box */}
             <div className="bg-[#181924] p-4 rounded-3xl border border-[#292b3c] space-y-3">
               <div className="flex justify-between items-center text-xs pb-2 border-b border-[#25283a]">
-                <span className="text-gray-400">Item:</span>
-                <span className="font-semibold text-white">Planora Verified Host Accreditation</span>
+                <span className="text-gray-400">Host ID Created:</span>
+                <span className="font-bold text-purple-400 font-mono">{hostId}</span>
               </div>
               <div className="flex justify-between items-center text-xs pb-2 border-b border-[#25283a]">
                 <span className="text-gray-400">Category:</span>
-                <span className="font-semibold text-purple-400">{category}</span>
+                <span className="font-semibold text-white">{category}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-bold text-white text-sm">Total Payable:</span>
@@ -344,7 +436,7 @@ export const BecomeHostScreen: React.FC = () => {
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setStep('form')}
+                onClick={() => setStep('credentials')}
                 className="py-3.5 px-4 rounded-2xl bg-[#1b1c28] border border-[#2d2f44] text-xs font-semibold text-gray-300 hover:text-white transition"
               >
                 Back
@@ -356,13 +448,13 @@ export const BecomeHostScreen: React.FC = () => {
                 className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white font-bold text-xs shadow-lg shadow-green-600/30 hover:brightness-110 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>{loading ? 'Processing Payment...' : 'Pay ₹300 & Submit Application'}</span>
+                <span>{loading ? 'Processing Payment...' : 'Pay ₹300 & Register Host'}</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 4: SUBMITTED & WAITING FOR ADMIN APPROVAL */}
+        {/* STEP 5: SUBMITTED */}
         {step === 'done' && (
           <div className="text-center space-y-5 py-8">
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-indigo-600 p-0.5 mx-auto shadow-2xl shadow-purple-500/30 flex items-center justify-center">
@@ -377,19 +469,23 @@ export const BecomeHostScreen: React.FC = () => {
 
             <div className="space-y-1.5">
               <span className="text-[10px] uppercase font-bold tracking-widest text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">
-                {isHostVerified ? 'HOST STATUS: VERIFIED' : 'APPLICATION SUBMITTED • PAYMENT CONFIRMED'}
+                {isHostVerified ? 'HOST ACCOUNT ACTIVE' : 'HOST REGISTERED • UNDER ADMIN REVIEW'}
               </span>
               <h3 className="text-2xl font-black text-white">
-                {isHostVerified ? 'You are a Verified Planora Host!' : 'Under Admin Review'}
+                {isHostVerified ? 'You are a Verified Planora Host!' : 'Host Credentials Submitted!'}
               </h3>
               <p className="text-xs text-gray-300 max-w-md mx-auto leading-relaxed">
                 {isHostVerified
-                  ? 'Your host credentials have been verified by the Planora admin team. You have full access to create and publish curated gatherings.'
-                  : 'Your ₹300 verification fee is confirmed. Our curation team verifies every host within 24-48 hours. Once approved from the Admin Panel, you will be able to publish gatherings!'}
+                  ? 'Your host account is verified! You can now log into your Host Panel to manage events and verify guests.'
+                  : `Your ₹300 verification payment is confirmed and Host ID "${hostId}" is created. The admin will review and verify your account. Once approved, use your Host ID and Password to sign in to your Host Panel!`}
               </p>
             </div>
 
             <div className="bg-[#181924] p-4 rounded-3xl border border-[#27293b] max-w-md mx-auto space-y-2 text-xs text-left">
+              <div className="flex justify-between items-center pb-2 border-b border-[#25283a]">
+                <span className="text-gray-400">Host Login ID:</span>
+                <span className="font-mono font-bold text-amber-400">{hostId}</span>
+              </div>
               <div className="flex justify-between items-center pb-2 border-b border-[#25283a]">
                 <span className="text-gray-400">Payment Status:</span>
                 <span className="text-green-400 font-bold flex items-center gap-1">
@@ -397,32 +493,21 @@ export const BecomeHostScreen: React.FC = () => {
                   <span>₹300.00 Paid</span>
                 </span>
               </div>
-              <div className="flex justify-between items-center pb-2 border-b border-[#25283a]">
-                <span className="text-gray-400">Review Status:</span>
-                <span className={`font-bold ${isHostVerified ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {isHostVerified ? 'Approved & Active' : 'Pending Admin Verification'}
-                </span>
-              </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">Admin Review Panel:</span>
-                <button
-                  onClick={() => navigateTo('admin')}
-                  className="text-purple-400 font-semibold underline hover:text-purple-300"
-                >
-                  Go to /admin
-                </button>
+                <span className="text-gray-400">Account Status:</span>
+                <span className={`font-bold ${isHostVerified ? 'text-green-400' : 'text-amber-400'}`}>
+                  {isHostVerified ? 'Verified & Active' : 'Pending Admin Verification'}
+                </span>
               </div>
             </div>
 
             <div className="pt-2 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              {isHostVerified && (
-                <button
-                  onClick={() => navigateTo('create_step1_type')}
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-purple-600/30 hover:brightness-110 transition"
-                >
-                  Create Gathering Now
-                </button>
-              )}
+              <button
+                onClick={() => navigateTo('host_login')}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-purple-600/30 hover:brightness-110 transition"
+              >
+                Go to Host Login →
+              </button>
               <button
                 onClick={() => navigateTo('home')}
                 className="flex-1 py-3 rounded-2xl bg-[#1b1c28] border border-[#2d2f44] text-xs font-semibold text-gray-200 hover:text-white transition"
@@ -436,4 +521,3 @@ export const BecomeHostScreen: React.FC = () => {
     </div>
   );
 };
-
