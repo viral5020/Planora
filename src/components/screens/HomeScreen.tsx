@@ -12,32 +12,36 @@ import {
   Compass,
   CheckCircle,
   Sparkles,
-  Map
+  Crown,
+  Loader2
 } from 'lucide-react';
 
-const CATEGORIES = ['All', 'Nightlife', 'House Parties', 'Food & Rooftops', 'Sports & Turf', 'Music & Mix', 'Coffee & Cafes'];
+const CATEGORIES = ['All', 'Nightlife', 'Food & Rooftops', 'Sports & Turf', 'Music & Mix'];
 
 export const HomeScreen: React.FC = () => {
   const {
     events,
+    eventsLoading,
     selectedCity,
     setSelectedCity,
     setSelectedEvent,
     navigateTo,
     requestRSVP,
-    notifications
+    isHostVerified
   } = useApp();
 
   const [activeCategory, setActiveCategory] = useState('All');
-  const [showHeatMapModal, setShowHeatMapModal] = useState(false);
 
-  const unreadNotifs = notifications.filter((n) => !n.read).length;
+  // Only show approved/verified events on the main feed
+  const approvedEvents = events.filter((e) => e.verificationStatus === 'approved' || !e.verificationStatus);
 
   const filteredEvents = activeCategory === 'All'
-    ? events
-    : events.filter((e) => e.category.toLowerCase().includes(activeCategory.toLowerCase().split(' ')[0]));
+    ? approvedEvents
+    : approvedEvents.filter((e) =>
+        e.category.toLowerCase().includes(activeCategory.toLowerCase().split(' ')[0])
+      );
 
-  const tonightEvent = events.find((e) => e.id === 'rooftop-sunset-beats') || events[0];
+  const spotlightEvent = approvedEvents[0];
 
   const handleOpenEvent = (event: EventItem) => {
     setSelectedEvent(event);
@@ -48,290 +52,192 @@ export const HomeScreen: React.FC = () => {
     <div className="flex-1 bg-[#13141a] text-white p-4 space-y-5">
       {/* Top Header Bar */}
       <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-xs shadow-md shadow-purple-500/30">
-            P
-          </div>
-          <div>
-            <div className="flex items-center gap-1 cursor-pointer">
-              <span className="font-extrabold text-sm tracking-wide text-white">PLANORA</span>
-              <span className="text-gray-500">•</span>
-              <button
-                onClick={() => navigateTo('onboarding_location')}
-                className="text-xs font-semibold text-purple-400 flex items-center gap-0.5 hover:underline"
-              >
-                <MapPin className="w-3 h-3 text-purple-400" />
-                <span>{selectedCity}</span>
-              </button>
-            </div>
-            <p className="text-[10px] text-gray-400">Discover tonight's curated gatherings</p>
-          </div>
-        </div>
-
-        {/* Notification Bell */}
-        <button
-          onClick={() => navigateTo('notifications')}
-          className="relative w-9 h-9 rounded-full bg-[#1b1d29] border border-[#292c3f] flex items-center justify-center text-gray-300 hover:text-white transition"
-        >
-          <Bell className="w-4 h-4" />
-          {unreadNotifs > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-pink-500 ring-2 ring-[#13141a]"></span>
-          )}
-        </button>
-      </div>
-
-      {/* Hero Welcome banner */}
-      <div className="bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-[#191b26] p-4 rounded-3xl border border-purple-500/20 relative overflow-hidden">
-        <div className="relative z-10 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-pink-400" /> Curated Community Socials
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+            RADAR ACTIVE
           </span>
-          <h2 className="text-base font-extrabold text-white">Good plans start with good people.</h2>
-          <p className="text-[11px] text-gray-300 leading-relaxed">
-            Real gatherings with verified guest lists and host approval in {selectedCity}.
-          </p>
+          <h2 className="text-xl font-black text-white mt-1">Happening in {selectedCity}</h2>
+          <p className="text-xs text-gray-400">Curated gatherings and community socials tonight.</p>
         </div>
+
+        {!isHostVerified && (
+          <button
+            onClick={() => navigateTo('become_host')}
+            className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition hover:scale-105"
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-400" />
+            <span>Host (₹300)</span>
+          </button>
+        )}
       </div>
 
       {/* Category Pills */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-full whitespace-nowrap transition font-medium text-xs ${
-                isActive
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                  : 'bg-[#1b1c28] text-gray-300 hover:text-white border border-[#272a3b]'
-              }`}
-            >
-              {cat}
-            </button>
-          );
-        })}
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            className={`px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-semibold transition ${
+              activeCategory === cat
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                : 'bg-[#1b1c28] text-gray-300 hover:text-white border border-[#282a3d]'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
-      {/* Section 1: Happening Tonight */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Flame className="w-4 h-4 text-pink-500 fill-pink-500" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">Happening Tonight</h3>
-          </div>
-          <span className="text-[11px] text-purple-400 font-semibold font-mono">Surat Nightlife</span>
+      {/* Loading state */}
+      {eventsLoading && (
+        <div className="py-12 flex flex-col items-center justify-center gap-2 text-gray-400 text-xs">
+          <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+          <span>Syncing gatherings from Supabase...</span>
         </div>
+      )}
 
-        {/* Featured Big Card */}
+      {/* Hero Spotlight Card */}
+      {!eventsLoading && spotlightEvent && (
         <div
-          onClick={() => handleOpenEvent(tonightEvent)}
-          className="group relative rounded-3xl overflow-hidden border border-[#2a2c3d] bg-[#181924] shadow-lg cursor-pointer transform hover:-translate-y-1 transition duration-200"
+          onClick={() => handleOpenEvent(spotlightEvent)}
+          className="relative rounded-3xl overflow-hidden border border-[#292b3d] bg-gradient-to-t from-black via-black/40 to-transparent cursor-pointer group shadow-2xl"
         >
-          <div className="relative h-44 w-full overflow-hidden">
-            <img
-              src={tonightEvent.image}
-              alt={tonightEvent.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#13141a] via-[#13141a]/40 to-transparent"></div>
+          <img
+            src={spotlightEvent.image}
+            alt={spotlightEvent.title}
+            className="w-full h-56 sm:h-64 object-cover group-hover:scale-105 transition duration-500"
+          />
 
-            {/* Badges */}
-            <div className="absolute top-3 left-3 flex gap-1.5">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-pink-500/90 text-white backdrop-blur-md shadow">
-                TONIGHT • 6:30 PM
-              </span>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-black/60 text-white backdrop-blur-md border border-white/10">
-                {tonightEvent.category}
-              </span>
-            </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#12131b] via-[#12131b]/60 to-transparent"></div>
 
-            <div className="absolute top-3 right-3">
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-purple-600/90 text-white backdrop-blur-md">
-                ₹{tonightEvent.price}
-              </span>
-            </div>
-
-            {/* Card Content Overlay */}
-            <div className="absolute bottom-3 left-3 right-3 space-y-1">
-              <h4 className="text-base font-extrabold text-white leading-snug drop-shadow-md">
-                {tonightEvent.title}
-              </h4>
-              <p className="text-[11px] text-gray-300 flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-purple-400 shrink-0" />
-                <span className="truncate">{tonightEvent.venue}</span>
-              </p>
-            </div>
+          <div className="absolute top-3 left-3 flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-pink-600 text-white shadow-lg shadow-pink-600/30 flex items-center gap-1">
+              <Flame className="w-3 h-3" />
+              <span>Tonight's Spotlight</span>
+            </span>
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-mono bg-[#161722]/80 backdrop-blur-md text-purple-300 border border-purple-500/30 font-bold">
+              {spotlightEvent.category}
+            </span>
           </div>
 
-          <div className="p-3 flex items-center justify-between bg-[#191a26] border-t border-[#26283a]">
-            <div className="flex items-center gap-2">
-              <img
-                src={tonightEvent.host.avatar}
-                alt={tonightEvent.host.name}
-                className="w-6 h-6 rounded-full border border-purple-400 object-cover"
-              />
-              <span className="text-[11px] text-gray-300">
-                Hosted by <span className="font-semibold text-white">{tonightEvent.host.name}</span>
-              </span>
-            </div>
+          <div className="absolute bottom-3 left-3 right-3 space-y-2">
+            <h3 className="text-lg sm:text-xl font-extrabold text-white leading-tight">
+              {spotlightEvent.title}
+            </h3>
+            <p className="text-xs text-gray-300 line-clamp-1">{spotlightEvent.vibeDescription}</p>
 
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-400 font-mono">
-                {tonightEvent.attendingCount}/{tonightEvent.totalCapacity} spots
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  requestRSVP(tonightEvent.id);
-                }}
-                className={`px-3 py-1 rounded-xl text-[11px] font-semibold transition ${
-                  tonightEvent.status === 'approved'
-                    ? 'bg-green-600/20 text-green-300 border border-green-500/30'
-                    : 'bg-purple-600 hover:bg-purple-500 text-white'
-                }`}
-              >
-                {tonightEvent.status === 'approved' ? 'Attending ✓' : 'Join Tonight'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section 2: This Weekend & More */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-purple-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">This Weekend in Surat</h3>
-          </div>
-          <span className="text-[11px] text-gray-400 font-mono">{filteredEvents.length} events</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredEvents.map((evt) => (
-            <div
-              key={evt.id}
-              onClick={() => handleOpenEvent(evt)}
-              className="bg-[#181924] hover:bg-[#1e202f] p-3 rounded-2xl border border-[#27293b] flex gap-3 cursor-pointer transition"
-            >
-              <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 relative">
-                <img src={evt.image} alt={evt.title} className="w-full h-full object-cover" />
-                <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white">
-                  ₹{evt.price}
-                </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex items-center gap-3 text-xs text-gray-300 font-mono">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-purple-400" />
+                  <span>{spotlightEvent.time}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5 text-purple-400" />
+                  <span>{spotlightEvent.attendingCount} attending</span>
+                </span>
               </div>
 
-              <div className="flex-1 flex flex-col justify-between py-0.5">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-purple-400 uppercase tracking-wide">
-                      {evt.category}
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-mono">{evt.date}</span>
-                  </div>
-                  <h4 className="text-xs font-bold text-white line-clamp-1">{evt.title}</h4>
-                  <p className="text-[10px] text-gray-400 truncate mt-0.5">{evt.venue}</p>
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-1 text-[10px] text-gray-400 font-mono">
-                    <Users className="w-3 h-3 text-gray-400" />
-                    <span>{evt.attendingCount} attending</span>
-                  </div>
-
-                  <span className="text-[11px] font-semibold text-purple-400 group-hover:translate-x-1 transition flex items-center gap-0.5">
-                    View <ArrowRight className="w-3 h-3" />
-                  </span>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-purple-400 font-mono">
+                  ₹{spotlightEvent.price}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    requestRSVP(spotlightEvent.id);
+                  }}
+                  className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs shadow-md shadow-purple-600/30 hover:brightness-110"
+                >
+                  {spotlightEvent.status === 'approved' ? 'Pass Ready' : spotlightEvent.status === 'pending' ? 'Pending' : 'Request RSVP'}
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Community Circle Teaser */}
-      <div
-        onClick={() => navigateTo('communities')}
-        className="bg-gradient-to-r from-purple-950/60 to-[#1b1c2b] p-4 rounded-2xl border border-purple-500/30 flex items-center justify-between cursor-pointer hover:border-purple-400 transition"
-      >
-        <div className="space-y-0.5">
-          <span className="text-[10px] uppercase font-bold text-pink-400 tracking-wider">
-            Communities
-          </span>
-          <h4 className="text-xs font-bold text-white">Surat Vinyl, Foodies & Football Circles</h4>
-          <p className="text-[10px] text-gray-400">Join regular recurring local social circles.</p>
-        </div>
-        <div className="w-8 h-8 rounded-full bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 shrink-0">
-          <ArrowRight className="w-4 h-4" />
-        </div>
-      </div>
-
-      {/* Sticky Bottom Heatmap Trigger */}
-      <div className="pt-2">
-        <button
-          onClick={() => setShowHeatMapModal(true)}
-          className="w-full py-2.5 px-4 rounded-2xl bg-[#1d1f2d] hover:bg-[#25273a] border border-purple-500/40 text-purple-300 font-semibold text-xs transition flex items-center justify-center gap-2 shadow-lg"
-        >
-          <Map className="w-4 h-4 text-purple-400" />
-          <span>Explore Surat Live Gathering Heat Map</span>
-        </button>
-      </div>
-
-      {/* Live Heat Map Modal */}
-      {showHeatMapModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#181924] border border-[#2e3146] rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-sm font-bold text-white">Surat Live Activity Heat Map</h3>
-                <p className="text-[11px] text-gray-400">High density gathering spots right now</p>
-              </div>
-              <button
-                onClick={() => setShowHeatMapModal(false)}
-                className="text-gray-400 hover:text-white text-xs font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Stylized Dark Radar Map Simulation */}
-            <div className="h-52 w-full bg-[#101117] rounded-2xl border border-[#25283a] relative overflow-hidden flex items-center justify-center">
-              <div className="absolute inset-0 bg-[radial-gradient(#25283a_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
-
-              {/* Heat map pulse dots */}
-              <div className="absolute top-12 left-16 flex flex-col items-center">
-                <span className="w-5 h-5 rounded-full bg-pink-500/40 animate-ping absolute"></span>
-                <span className="w-3.5 h-3.5 rounded-full bg-pink-500 border border-white"></span>
-                <span className="text-[9px] font-bold text-white bg-black/80 px-1 rounded mt-1">Vesu (32)</span>
-              </div>
-
-              <div className="absolute bottom-14 right-14 flex flex-col items-center">
-                <span className="w-6 h-6 rounded-full bg-purple-500/40 animate-ping absolute"></span>
-                <span className="w-3.5 h-3.5 rounded-full bg-purple-500 border border-white"></span>
-                <span className="text-[9px] font-bold text-white bg-black/80 px-1 rounded mt-1">Dumas (24)</span>
-              </div>
-
-              <div className="absolute top-20 right-24 flex flex-col items-center">
-                <span className="w-4 h-4 rounded-full bg-indigo-500/40 animate-ping absolute"></span>
-                <span className="w-3 h-3 rounded-full bg-indigo-500 border border-white"></span>
-                <span className="text-[9px] font-bold text-white bg-black/80 px-1 rounded mt-1">Piplod (18)</span>
-              </div>
-
-              <div className="text-center text-[10px] text-gray-500">
-                Surat Municipal Area • 74 Active Guests
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowHeatMapModal(false)}
-              className="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold text-xs"
-            >
-              Close Map
-            </button>
           </div>
         </div>
       )}
+
+      {/* Grid of Verified Events */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
+            Curated Gatherings ({filteredEvents.length})
+          </h3>
+          <span className="text-[11px] text-purple-400 font-mono">Verified Only</span>
+        </div>
+
+        {filteredEvents.length === 0 && !eventsLoading ? (
+          <div className="bg-[#181924] p-8 rounded-3xl border border-[#27293b] text-center space-y-2">
+            <Compass className="w-8 h-8 text-gray-500 mx-auto" />
+            <h4 className="text-sm font-bold text-white">No gatherings in this category yet.</h4>
+            <p className="text-xs text-gray-400">
+              Be the first verified host to publish a gathering!
+            </p>
+            <button
+              onClick={() => navigateTo(isHostVerified ? 'create_step1_type' : 'become_host')}
+              className="mt-2 py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white transition"
+            >
+              {isHostVerified ? 'Create Gathering' : 'Become a Host (₹300)'}
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {filteredEvents.map((evt) => (
+              <div
+                key={evt.id}
+                onClick={() => handleOpenEvent(evt)}
+                className="bg-[#181924] rounded-3xl border border-[#27293b] overflow-hidden hover:border-purple-500/50 cursor-pointer transition flex flex-col justify-between group shadow-lg"
+              >
+                <div>
+                  <div className="relative h-36 overflow-hidden">
+                    <img
+                      src={evt.image}
+                      alt={evt.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[#141520]/80 backdrop-blur-md text-purple-300 border border-purple-500/30">
+                        {evt.category}
+                      </span>
+                    </div>
+                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md font-mono text-xs font-black text-purple-400">
+                      ₹{evt.price}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 space-y-1.5">
+                    <h4 className="text-sm font-extrabold text-white group-hover:text-purple-300 transition line-clamp-1">
+                      {evt.title}
+                    </h4>
+                    <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate">
+                      <MapPin className="w-3 h-3 text-purple-400 shrink-0" />
+                      <span>{evt.venue}</span>
+                    </p>
+                    <p className="text-xs text-gray-300 line-clamp-2 leading-relaxed">
+                      {evt.vibeDescription}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 pt-0 flex items-center justify-between border-t border-[#232535] mt-2 pt-2 text-xs">
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    🗓️ {evt.date} • {evt.time}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      requestRSVP(evt.id);
+                    }}
+                    className="py-1 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] shadow-sm transition"
+                  >
+                    {evt.status === 'approved' ? 'Attending' : evt.status === 'pending' ? 'Pending' : 'RSVP'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

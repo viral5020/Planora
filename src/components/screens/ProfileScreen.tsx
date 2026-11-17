@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Settings, ShieldCheck, LogOut } from 'lucide-react';
+import { Settings, ShieldCheck, LogOut, Crown, PlusCircle, ArrowRight } from 'lucide-react';
 
 export const ProfileScreen: React.FC = () => {
-  const { navigateTo, userProfile, userEmail, logout } = useApp();
+  const { navigateTo, userProfile, userEmail, logout, isHostVerified, hostStatus } = useApp();
 
   const name = userProfile?.name || 'Aarav Mehta';
   const handle = userProfile?.handle || '@aarav_surat';
@@ -42,18 +42,61 @@ export const ProfileScreen: React.FC = () => {
         <div>
           <div className="flex items-center justify-center gap-1.5">
             <h2 className="text-base font-extrabold text-white">{name}</h2>
-            <span className="px-1.5 py-0.2 rounded text-[9px] bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
-              PRO
-            </span>
+            {isHostVerified ? (
+              <span className="px-1.5 py-0.2 rounded text-[9px] bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black border border-purple-400/40">
+                VERIFIED HOST
+              </span>
+            ) : hostStatus === 'pending' ? (
+              <span className="px-1.5 py-0.2 rounded text-[9px] bg-yellow-500/20 text-yellow-300 font-bold border border-yellow-500/30">
+                HOST PENDING REVIEW
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.2 rounded text-[9px] bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                MEMBER
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-400 font-mono">
-            {handle} {userEmail ? `• ${userEmail}` : '• Vesu, Surat'}
+            {handle} {userEmail ? `• ${userEmail}` : '• Surat'}
           </p>
         </div>
 
-        <p className="text-xs text-gray-300 leading-relaxed max-w-xs mx-auto">
-          Curating real-world connections, rooftop gatherings & specialty coffee across Surat.
-        </p>
+        {/* Host Status Callout */}
+        {!isHostVerified && (
+          <div className="p-3 bg-gradient-to-r from-amber-500/10 to-pink-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-between text-left">
+            <div className="flex items-center gap-2.5">
+              <Crown className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <h4 className="text-xs font-bold text-white">Upgrade to Verified Host</h4>
+                <p className="text-[10px] text-gray-300">Publish curated gatherings for ₹300 lifetime verification fee.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigateTo('become_host')}
+              className="py-1 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[11px] shrink-0 transition"
+            >
+              Apply (₹300)
+            </button>
+          </div>
+        )}
+
+        {isHostVerified && (
+          <div className="p-3 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/30 rounded-2xl flex items-center justify-between text-left">
+            <div className="flex items-center gap-2.5">
+              <PlusCircle className="w-5 h-5 text-purple-400 shrink-0" />
+              <div>
+                <h4 className="text-xs font-bold text-white">Verified Host Account Active</h4>
+                <p className="text-[10px] text-gray-300">You can publish gatherings & curate guest requests.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigateTo('create_step1_type')}
+              className="py-1 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-[11px] shrink-0 transition"
+            >
+              Host Event
+            </button>
+          </div>
+        )}
 
         {/* Profile Action Buttons */}
         <div className="flex gap-2 pt-1">
@@ -76,11 +119,11 @@ export const ProfileScreen: React.FC = () => {
       {/* Stats Counter */}
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="bg-[#181924] p-3 rounded-2xl border border-[#27293b]">
-          <span className="text-base font-extrabold text-white">14</span>
+          <span className="text-base font-extrabold text-white">3</span>
           <p className="text-[10px] text-gray-400">Gatherings</p>
         </div>
         <div className="bg-[#181924] p-3 rounded-2xl border border-[#27293b]">
-          <span className="text-base font-extrabold text-purple-400">342</span>
+          <span className="text-base font-extrabold text-purple-400">128</span>
           <p className="text-[10px] text-gray-400">Connections</p>
         </div>
         <div className="bg-[#181924] p-3 rounded-2xl border border-[#27293b]">
@@ -92,7 +135,7 @@ export const ProfileScreen: React.FC = () => {
       {/* Attended Gatherings Showcase */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <h3 className="font-bold text-white uppercase tracking-wider">Attended Gatherings</h3>
+          <h3 className="font-bold text-white uppercase tracking-wider">Passes & Bookings</h3>
           <span className="text-purple-400 font-mono text-[11px] cursor-pointer" onClick={() => navigateTo('my_events')}>
             View All
           </span>
@@ -103,22 +146,22 @@ export const ProfileScreen: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-lg">🎧</span>
               <div>
-                <h4 className="font-bold text-white text-[11px]">Surat Vinyl Circle Session #17</h4>
-                <p className="text-[10px] text-gray-400">Amber Lounge, Dumas Road</p>
+                <h4 className="font-bold text-white text-[11px]">Midnight Vinyl & Tapas Social</h4>
+                <p className="text-[10px] text-gray-400">Skyline Terrace Lounge, Vesu</p>
               </div>
             </div>
-            <span className="text-[10px] text-green-400 font-mono">Attended</span>
+            <span className="text-[10px] text-green-400 font-mono">Confirmed</span>
           </div>
 
           <div className="bg-[#181924] p-2.5 rounded-2xl border border-[#27293b] flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-lg">☕</span>
+              <span className="text-lg">⚽</span>
               <div>
-                <h4 className="font-bold text-white text-[11px]">Sunday Pour-Over Masterclass</h4>
-                <p className="text-[10px] text-gray-400">The Bean Lab, Piplod</p>
+                <h4 className="font-bold text-white text-[11px]">Weekend Turf Football Clash</h4>
+                <p className="text-[10px] text-gray-400">Arena 9 Turf, VIP Road</p>
               </div>
             </div>
-            <span className="text-[10px] text-green-400 font-mono">Attended</span>
+            <span className="text-[10px] text-green-400 font-mono">Confirmed</span>
           </div>
         </div>
       </div>

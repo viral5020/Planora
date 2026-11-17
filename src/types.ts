@@ -21,7 +21,12 @@ export type ScreenId =
   | 'notifications'
   | 'my_events'
   | 'profile'
-  | 'settings_safety';
+  | 'settings_safety'
+  | 'become_host'
+  | 'admin';
+
+export type EventVerificationStatus = 'pending' | 'approved' | 'rejected';
+export type HostStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export interface EventItem {
   id: string;
@@ -42,6 +47,7 @@ export interface EventItem {
     avatar: string;
     rating: number;
     badge: string;
+    id?: string;
   };
   vibeDescription: string;
   vibeTags: string[];
@@ -49,6 +55,24 @@ export interface EventItem {
   status?: 'none' | 'pending' | 'approved';
   isCurated?: boolean;
   hasHostApproval?: boolean;
+  verificationStatus?: EventVerificationStatus;
+  rejectionReason?: string;
+}
+
+export interface HostApplicationItem {
+  id: string;
+  userId?: string;
+  userName: string;
+  userEmail?: string;
+  phone?: string;
+  category: string;
+  experienceBio: string;
+  paymentAmount: number;
+  paymentStatus: 'paid' | 'pending';
+  paymentReference?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  adminNotes?: string;
+  createdAt: string;
 }
 
 export interface CommunityItem {
@@ -62,7 +86,7 @@ export interface CommunityItem {
   description: string;
   tags: string[];
   upcomingEvents: string[];
-  members: Array<{
+  members?: Array<{
     name: string;
     avatar: string;
     role?: string;
@@ -105,7 +129,7 @@ export interface ChatMessage {
 
 export interface NotificationItem {
   id: string;
-  type: 'approval' | 'invite' | 'community' | 'safety';
+  type: 'approval' | 'invite' | 'community' | 'safety' | 'host_approved';
   title: string;
   description: string;
   timeAgo: string;

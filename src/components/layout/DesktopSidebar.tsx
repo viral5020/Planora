@@ -11,15 +11,31 @@ import {
   Settings,
   Sparkles,
   LogOut,
-  LogIn
+  LogIn,
+  Crown,
+  ShieldAlert
 } from 'lucide-react';
 import type { ScreenId } from '../../types';
 
 export const DesktopSidebar: React.FC = () => {
-  const { currentScreen, navigateTo, guestRequests, notifications, userProfile, userId, logout } = useApp();
+  const {
+    currentScreen,
+    navigateTo,
+    guestRequests,
+    notifications,
+    userProfile,
+    userId,
+    logout,
+    isHostVerified,
+    hostApplications,
+    events
+  } = useApp();
 
   const pendingRequestsCount = guestRequests.filter((g) => g.status === 'pending').length;
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const pendingAdminCount =
+    hostApplications.filter((h) => h.status === 'pending').length +
+    events.filter((e) => e.verificationStatus === 'pending').length;
 
   const navLinks: Array<{
     id: ScreenId;
@@ -32,9 +48,15 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'people', label: 'People Radar', icon: <Users className="w-4 h-4" /> },
     { id: 'communities', label: 'Communities', icon: <Building2 className="w-4 h-4" /> },
     {
-      id: 'create_step1_type',
-      label: 'Host a Gathering',
-      icon: <PlusCircle className="w-4 h-4 text-purple-400" />
+      id: isHostVerified ? 'create_step1_type' : 'become_host',
+      label: isHostVerified ? 'Host a Gathering' : 'Become a Host (₹300)',
+      icon: isHostVerified ? (
+        <PlusCircle className="w-4 h-4 text-purple-400" />
+      ) : (
+        <Crown className="w-4 h-4 text-amber-400" />
+      ),
+      badge: isHostVerified ? undefined : 300,
+      badgeColor: 'bg-gradient-to-r from-amber-500 to-pink-500'
     },
     {
       id: 'host_management',
@@ -54,6 +76,13 @@ export const DesktopSidebar: React.FC = () => {
       icon: <Sparkles className="w-4 h-4" />,
       badge: unreadCount,
       badgeColor: 'bg-purple-500'
+    },
+    {
+      id: 'admin',
+      label: 'Admin Console (/admin)',
+      icon: <ShieldAlert className="w-4 h-4 text-pink-400" />,
+      badge: pendingAdminCount > 0 ? pendingAdminCount : undefined,
+      badgeColor: 'bg-pink-600'
     },
     { id: 'profile', label: 'My Profile & Passes', icon: <User className="w-4 h-4" /> },
     { id: 'settings_safety', label: 'Settings & Safety', icon: <Settings className="w-4 h-4" /> }
@@ -131,9 +160,16 @@ export const DesktopSidebar: React.FC = () => {
               className="w-9 h-9 rounded-full object-cover border border-purple-500/50 shrink-0"
             />
             <div className="truncate">
-              <h4 className="text-xs font-bold text-white group-hover:text-purple-300 transition truncate">
-                {name}
-              </h4>
+              <div className="flex items-center gap-1">
+                <h4 className="text-xs font-bold text-white group-hover:text-purple-300 transition truncate">
+                  {name}
+                </h4>
+                {isHostVerified && (
+                  <span className="px-1 rounded text-[8px] font-bold bg-purple-500/30 text-purple-300">
+                    HOST
+                  </span>
+                )}
+              </div>
               <p className="text-[10px] text-gray-400 font-mono truncate">{handle}</p>
             </div>
           </div>

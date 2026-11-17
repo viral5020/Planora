@@ -25,8 +25,10 @@ import { NotificationsScreen } from './components/screens/NotificationsScreen';
 import { MyEventsScreen } from './components/screens/MyEventsScreen';
 import { ProfileScreen } from './components/screens/ProfileScreen';
 import { SettingsSafetyScreen } from './components/screens/SettingsSafetyScreen';
+import { BecomeHostScreen } from './components/screens/BecomeHostScreen';
+import { AdminScreen } from './components/screens/AdminScreen';
 
-import { Compass, Users, PlusCircle, MessageSquare, User } from 'lucide-react';
+import { Compass, Users, PlusCircle, MessageSquare, User, ShieldAlert } from 'lucide-react';
 import type { ScreenId } from './types';
 
 const MainScreenRouter: React.FC = () => {
@@ -76,12 +78,45 @@ const MainScreenRouter: React.FC = () => {
         return <ProfileScreen />;
       case 'settings_safety':
         return <SettingsSafetyScreen />;
+      case 'become_host':
+        return <BecomeHostScreen />;
+      case 'admin':
+        return <AdminScreen />;
       default:
         return <HomeScreen />;
     }
   };
 
-  const isFullBleedOnboarding = ['splash', 'landing', 'auth_phone', 'onboarding_interests', 'onboarding_location'].includes(currentScreen);
+  const isFullBleedOnboarding = [
+    'splash',
+    'landing',
+    'auth_phone',
+    'onboarding_interests',
+    'onboarding_location'
+  ].includes(currentScreen);
+
+  // If viewing admin route, give full clean screen
+  if (currentScreen === 'admin') {
+    return (
+      <div className="min-h-screen bg-[#0e0f15] text-white flex flex-col font-sans">
+        <ProductionTopNavbar />
+        <main className="flex-1 p-3 sm:p-6 overflow-y-auto">
+          <AdminScreen />
+        </main>
+      </div>
+    );
+  }
+
+  // If on full bleed onboarding screens, render cleanly centered without sidebar
+  if (isFullBleedOnboarding) {
+    return (
+      <div className="min-h-screen bg-[#0e0f15] text-white flex flex-col justify-center items-center p-4">
+        <div className="w-full max-w-md bg-[#13141b] rounded-3xl border border-[#20222f] shadow-2xl overflow-hidden min-h-[680px] flex flex-col">
+          {renderScreen()}
+        </div>
+      </div>
+    );
+  }
 
   const showBottomNavOnMobile = [
     'home',
@@ -108,17 +143,6 @@ const MainScreenRouter: React.FC = () => {
     { id: 'inbox', label: 'Inbox', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> }
   ];
-
-  // If on full bleed onboarding screens, render cleanly centered without sidebar
-  if (isFullBleedOnboarding) {
-    return (
-      <div className="min-h-screen bg-[#0e0f15] text-white flex flex-col justify-center items-center p-4">
-        <div className="w-full max-w-md bg-[#13141b] rounded-3xl border border-[#20222f] shadow-2xl overflow-hidden min-h-[680px] flex flex-col">
-          {renderScreen()}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#0e0f15] text-white flex flex-col font-sans selection:bg-purple-500 selection:text-white">

@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Search, Bell, MapPin, ChevronDown, LogIn, LogOut } from 'lucide-react';
+import { Search, Bell, MapPin, ChevronDown, LogIn, LogOut, ShieldAlert, Crown } from 'lucide-react';
 
 export const ProductionTopNavbar: React.FC = () => {
-  const { selectedCity, navigateTo, notifications, events, userId, userProfile, logout } = useApp();
+  const {
+    selectedCity,
+    navigateTo,
+    notifications,
+    events,
+    userId,
+    userProfile,
+    logout,
+    isHostVerified,
+    setSelectedEvent
+  } = useApp();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -71,6 +82,7 @@ export const ProductionTopNavbar: React.FC = () => {
                   <div
                     key={evt.id}
                     onClick={() => {
+                      setSelectedEvent(evt);
                       navigateTo('event_detail');
                       setShowSearchResults(false);
                       setSearchQuery('');
@@ -97,8 +109,29 @@ export const ProductionTopNavbar: React.FC = () => {
           )}
         </div>
 
-        {/* Right Actions: City, Notifications & User Avatar / Sign In */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Right Actions: Admin Link, City, Notifications & User Avatar */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Quick Admin Console Button */}
+          <button
+            onClick={() => navigateTo('admin')}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-pink-600/20 to-purple-600/20 hover:from-pink-600/30 hover:to-purple-600/30 border border-pink-500/30 text-pink-300 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm"
+            title="Open Superadmin Console"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-pink-400" />
+            <span className="hidden sm:inline">/admin</span>
+          </button>
+
+          {/* Become Host Banner Pill if not verified */}
+          {!isHostVerified && (
+            <button
+              onClick={() => navigateTo('become_host')}
+              className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold transition"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <span>Host (₹300)</span>
+            </button>
+          )}
+
           {/* Desktop City Switcher */}
           <button
             onClick={() => navigateTo('onboarding_location')}
@@ -106,7 +139,6 @@ export const ProductionTopNavbar: React.FC = () => {
           >
             <MapPin className="w-3.5 h-3.5 text-purple-400" />
             <span className="font-bold text-white">{selectedCity}</span>
-            <span className="text-[10px] text-green-400 font-mono font-semibold">• 89 Active</span>
           </button>
 
           {/* Notifications Bell with Badge */}
@@ -135,7 +167,7 @@ export const ProductionTopNavbar: React.FC = () => {
                   alt={userProfile?.name || 'User'}
                   className="w-8 h-8 rounded-xl object-cover border border-purple-500/50 group-hover:border-purple-400 transition"
                 />
-                <span className="text-xs font-bold text-white hidden sm:inline max-w-[100px] truncate">
+                <span className="text-xs font-bold text-white hidden sm:inline max-w-[90px] truncate">
                   {userProfile?.name?.split(' ')[0] || 'Member'}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
@@ -145,10 +177,17 @@ export const ProductionTopNavbar: React.FC = () => {
               {showProfileMenu && (
                 <div
                   onMouseLeave={() => setShowProfileMenu(false)}
-                  className="absolute right-0 top-full mt-2 w-48 bg-[#181924] border border-[#2a2d3e] rounded-2xl shadow-2xl p-2 z-50 space-y-1"
+                  className="absolute right-0 top-full mt-2 w-52 bg-[#181924] border border-[#2a2d3e] rounded-2xl shadow-2xl p-2 z-50 space-y-1"
                 >
                   <div className="px-3 py-2 border-b border-[#242738]">
-                    <p className="text-xs font-bold text-white truncate">{userProfile?.name || 'Member'}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-white truncate">{userProfile?.name || 'Member'}</p>
+                      {isHostVerified && (
+                        <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          HOST
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-gray-400 truncate font-mono">{userProfile?.handle || '@member'}</p>
                   </div>
 
@@ -161,6 +200,29 @@ export const ProductionTopNavbar: React.FC = () => {
                   >
                     View Profile
                   </button>
+
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigateTo('become_host');
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-500/10 transition flex items-center justify-between"
+                  >
+                    <span>Become a Host</span>
+                    <span className="text-[9px] font-bold bg-amber-500/20 px-1.5 py-0.5 rounded">₹300</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigateTo('admin');
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs text-pink-300 hover:bg-pink-500/10 transition flex items-center gap-1.5"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>Admin Panel (/admin)</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);
