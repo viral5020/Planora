@@ -192,3 +192,4 @@ VALUES
     'approved'
   )
 ON CONFLICT DO NOTHING;
+
