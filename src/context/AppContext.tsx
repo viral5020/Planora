@@ -309,6 +309,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           payment_amount: 300,
           payment_status: 'paid',
           payment_reference: paymentRef,
+          host_id: chosenHostId,
+          host_password: chosenPass,
           status: 'pending'
         }).select().single();
 
@@ -526,6 +528,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           paymentAmount: a.payment_amount || 300,
           paymentStatus: a.payment_status || 'paid',
           paymentReference: a.payment_reference,
+          hostId: a.host_id,
+          hostPassword: a.host_password,
           status: a.status || 'pending',
           adminNotes: a.admin_notes,
           createdAt: a.created_at

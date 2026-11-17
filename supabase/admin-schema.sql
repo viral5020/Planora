@@ -39,11 +39,17 @@ CREATE TABLE IF NOT EXISTS public.host_applications (
   payment_amount      INTEGER DEFAULT 300,
   payment_status      TEXT DEFAULT 'paid', -- 'paid' | 'pending' | 'failed'
   payment_reference   TEXT,
+  host_id             TEXT UNIQUE,         -- custom Host ID chosen by applicant
+  host_password       TEXT,               -- host panel password (plain for demo; hash in prod)
   status              TEXT DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
   admin_notes         TEXT,
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   reviewed_at         TIMESTAMPTZ
 );
+
+-- If the table already exists, add the columns if missing
+ALTER TABLE public.host_applications ADD COLUMN IF NOT EXISTS host_id TEXT UNIQUE;
+ALTER TABLE public.host_applications ADD COLUMN IF NOT EXISTS host_password TEXT;
 
 ALTER TABLE public.host_applications ENABLE ROW LEVEL SECURITY;
 
