@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Search, Bell, MapPin, Sparkles, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Search, Bell, MapPin, ChevronDown, LogIn, LogOut } from 'lucide-react';
 
 export const ProductionTopNavbar: React.FC = () => {
-  const { selectedCity, navigateTo, notifications, events, setSelectedEvent } = useApp();
+  const { selectedCity, navigateTo, notifications, events, userId, userProfile, logout } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -42,7 +43,7 @@ export const ProductionTopNavbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Search Bar (Full on Desktop, icon/expandable on mobile) */}
+        {/* Search Bar */}
         <div className="flex-1 max-w-xl relative">
           <div className="relative flex items-center bg-[#171822] border border-[#27293b] rounded-2xl px-3.5 py-2 focus-within:border-purple-500/80 focus-within:ring-1 focus-within:ring-purple-500/50 transition">
             <Search className="w-4 h-4 text-gray-400 shrink-0" />
@@ -54,49 +55,30 @@ export const ProductionTopNavbar: React.FC = () => {
                 setShowSearchResults(true);
               }}
               onFocus={() => setShowSearchResults(true)}
-              placeholder="Search rooftop sessions, vinyl circles, foodies, badminton in Surat..."
-              className="bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none px-2.5 flex-1 w-full"
+              placeholder="Search gatherings, music, rooftops in Surat..."
+              className="bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none pl-2.5 w-full"
             />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setShowSearchResults(false);
-                }}
-                className="text-gray-400 hover:text-white text-xs px-1"
-              >
-                ✕
-              </button>
-            )}
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-gray-500 bg-[#202230] rounded border border-[#2d3044]">
-              ⌘K
-            </kbd>
           </div>
 
-          {/* Live Search Results Dropdown */}
+          {/* Search Dropdown Results */}
           {showSearchResults && searchQuery.trim() && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#181924] border border-[#2d3044] rounded-2xl shadow-2xl p-2 z-50 max-h-72 overflow-y-auto">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 py-1 block">
-                Matching Gatherings & Circles
-              </span>
+            <div
+              className="absolute left-0 right-0 top-full mt-2 bg-[#171824] border border-[#292b3c] rounded-2xl shadow-2xl p-2 z-50 space-y-1 max-h-80 overflow-y-auto"
+              onMouseLeave={() => setShowSearchResults(false)}
+            >
               {searchResults.length > 0 ? (
                 searchResults.map((evt) => (
                   <div
                     key={evt.id}
                     onClick={() => {
-                      setSelectedEvent(evt);
                       navigateTo('event_detail');
                       setShowSearchResults(false);
+                      setSearchQuery('');
                     }}
-                    className="p-2.5 rounded-xl hover:bg-[#202232] cursor-pointer flex items-center gap-3 transition"
+                    className="flex items-center justify-between p-2 rounded-xl hover:bg-[#202230] cursor-pointer transition"
                   >
-                    <img
-                      src={evt.image}
-                      alt={evt.title}
-                      className="w-10 h-10 rounded-lg object-cover"
-                    />
-                    <div className="flex-1 truncate">
-                      <h4 className="text-xs font-bold text-white truncate">{evt.title}</h4>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{evt.title}</h4>
                       <p className="text-[10px] text-gray-400 truncate">
                         {evt.category} • {evt.venue}
                       </p>
@@ -115,7 +97,7 @@ export const ProductionTopNavbar: React.FC = () => {
           )}
         </div>
 
-        {/* Right Actions: City, Notifications & User Avatar */}
+        {/* Right Actions: City, Notifications & User Avatar / Sign In */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Desktop City Switcher */}
           <button
@@ -141,21 +123,80 @@ export const ProductionTopNavbar: React.FC = () => {
             )}
           </button>
 
-          {/* User Profile Avatar */}
-          <button
-            onClick={() => navigateTo('profile')}
-            className="flex items-center gap-2 p-1 rounded-xl hover:bg-[#181924] transition group"
-          >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-              alt="User"
-              className="w-8 h-8 rounded-xl object-cover border border-purple-500/50 group-hover:border-purple-400 transition"
-            />
-            <span className="text-xs font-bold text-white hidden sm:inline">Aarav</span>
-          </button>
+          {/* User Profile Avatar or Sign In button */}
+          {userId || userProfile ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-2 p-1 rounded-xl hover:bg-[#181924] transition group"
+              >
+                <img
+                  src={userProfile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
+                  alt={userProfile?.name || 'User'}
+                  className="w-8 h-8 rounded-xl object-cover border border-purple-500/50 group-hover:border-purple-400 transition"
+                />
+                <span className="text-xs font-bold text-white hidden sm:inline max-w-[100px] truncate">
+                  {userProfile?.name?.split(' ')[0] || 'Member'}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div
+                  onMouseLeave={() => setShowProfileMenu(false)}
+                  className="absolute right-0 top-full mt-2 w-48 bg-[#181924] border border-[#2a2d3e] rounded-2xl shadow-2xl p-2 z-50 space-y-1"
+                >
+                  <div className="px-3 py-2 border-b border-[#242738]">
+                    <p className="text-xs font-bold text-white truncate">{userProfile?.name || 'Member'}</p>
+                    <p className="text-[10px] text-gray-400 truncate font-mono">{userProfile?.handle || '@member'}</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigateTo('profile');
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs text-gray-200 hover:bg-[#232537] hover:text-white transition"
+                  >
+                    View Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigateTo('settings_safety');
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs text-gray-200 hover:bg-[#232537] hover:text-white transition"
+                  >
+                    Settings & Safety
+                  </button>
+
+                  <div className="pt-1 border-t border-[#242738]">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs text-red-400 hover:bg-red-500/10 transition flex items-center gap-1.5"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => navigateTo('auth_phone')}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold text-xs shadow-md shadow-purple-600/30 hover:brightness-110 transition"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
   );
 };
-

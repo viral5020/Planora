@@ -29,7 +29,9 @@ interface AppContextType {
 
   // Auth
   userId: string | null;
+  userEmail: string | null;
   userProfile: { name: string; handle: string; avatar: string } | null;
+  logout: () => Promise<void>;
 
   // Onboarding state
   userPhone: string;
@@ -105,7 +107,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Auth state
   const [userId, setUserId] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ name: string; handle: string; avatar: string } | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name: string; handle: string; avatar: string } | null>({
+    name: 'Aarav Mehta',
+    handle: '@aarav_surat',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  });
 
   // Onboarding
   const [userPhone, setUserPhone] = useState('+91 94026 12345');
@@ -165,16 +172,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUserId(session.user.id);
-        loadUserProfile(session.user.id);
+        setUserEmail(session.user.email ?? null);
+        loadUserProfile(session.user);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUserId(session.user.id);
-        loadUserProfile(session.user.id);
+        setUserEmail(session.user.email ?? null);
+        loadUserProfile(session.user);
       } else {
         setUserId(null);
+        setUserEmail(null);
         setUserProfile(null);
       }
     });
@@ -182,20 +192,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserProfile = async (uid: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('name, handle, avatar_url')
-      .eq('id', uid)
-      .single();
+  const loadUserProfile = async (user: any) => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('name, handle, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    if (data) {
-      setUserProfile({
-        name: data.name,
-        handle: data.handle ?? '@user',
-        avatar: data.avatar_url ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      });
+      if (data && data.name) {
+        setUserProfile({
+          name: data.name,
+          handle: data.handle ?? `@${data.name.toLowerCase().replace(/\s+/g, '_')}`,
+          avatar: data.avatar_url ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        });
+      } else {
+        // Fallback to auth metadata
+        const metadata = user.user_metadata || {};
+        const displayName = metadata.full_name || metadata.name || user.email?.split('@')[0] || 'Planora Member';
+        setUserProfile({
+          name: displayName,
+          handle: `@${displayName.toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
+          avatar: metadata.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        });
+      }
+    } catch (e) {
+      console.warn('Could not load user profile:', e);
     }
+  };
+
+  const logout = async () => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase.auth.signOut();
+    }
+    setUserId(null);
+    setUserEmail(null);
+    setUserProfile(null);
+    navigateTo('landing');
   };
 
   // ─── Supabase: Fetch events ─────────────────────────────────────────────────
@@ -359,7 +392,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const requestRSVP = async (eventId: string) => {
     if (SUPABASE_CONFIGURED && userId) {
-      // Check existing
       const { data: existing } = await supabase
         .from('rsvps')
         .select('id, status')
@@ -377,7 +409,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setEvents(prev => prev.map(e => e.id === eventId ? { ...e, status: newStatus as 'pending' | 'approved' } : e));
       }
     } else {
-      // Local mock toggle
       setEvents((prev) =>
         prev.map((e) => {
           if (e.id === eventId) {
@@ -420,7 +451,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         sender_id: userId,
         text: text.trim(),
       });
-      // Real-time subscription adds message to state
     } else {
       const newMsg: ChatMessage = {
         id: `msg-${Date.now()}`,
@@ -520,9 +550,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       totalCapacity: gatheringDraft.capacity,
       attendingCount: 1,
       host: {
-        name: 'Aarav Mehta',
-        handle: '@aarav_surat',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        name: userProfile?.name ?? 'Aarav Mehta',
+        handle: userProfile?.handle ?? '@aarav_surat',
+        avatar: userProfile?.avatar ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
         rating: 4.9,
         badge: 'Top Host'
       },
@@ -560,7 +590,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         viewMode,
         setViewMode,
         userId,
+        userEmail,
         userProfile,
+        logout,
         userPhone,
         setUserPhone,
         otpCode,

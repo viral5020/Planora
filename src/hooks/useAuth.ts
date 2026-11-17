@@ -16,7 +16,6 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthState({
         user: session?.user ?? null,
@@ -25,7 +24,6 @@ export function useAuth() {
       });
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setAuthState({
@@ -39,28 +37,54 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithPhone = async (phone: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ phone });
+  const signInWithEmail = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error) throw error;
+    return data;
+  };
+
+  const signUpWithEmail = async (email: string, password: string, fullName?: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName || email.split('@')[0],
+        },
+      },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const signInWithPhone = async (phone: string) => {
+    const { data, error } = await supabase.auth.signInWithOtp({ phone });
+    if (error) throw error;
+    return data;
   };
 
   const verifyOtp = async (phone: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       phone,
       token,
       type: 'sms',
     });
     if (error) throw error;
+    return data;
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
       },
     });
     if (error) throw error;
+    return data;
   };
 
   const signOut = async () => {
@@ -70,6 +94,8 @@ export function useAuth() {
 
   return {
     ...authState,
+    signInWithEmail,
+    signUpWithEmail,
     signInWithPhone,
     verifyOtp,
     signInWithGoogle,

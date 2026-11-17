@@ -1,9 +1,13 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { Settings, ShieldCheck, Star, Users, Calendar, Award, Share2, Sparkles } from 'lucide-react';
+import { Settings, ShieldCheck, LogOut } from 'lucide-react';
 
 export const ProfileScreen: React.FC = () => {
-  const { navigateTo } = useApp();
+  const { navigateTo, userProfile, userEmail, logout } = useApp();
+
+  const name = userProfile?.name || 'Aarav Mehta';
+  const handle = userProfile?.handle || '@aarav_surat';
+  const avatar = userProfile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
 
   return (
     <div className="flex-1 bg-[#13141a] text-white p-4 space-y-4">
@@ -26,8 +30,8 @@ export const ProfileScreen: React.FC = () => {
       <div className="bg-[#181924] p-4 rounded-3xl border border-[#27293b] text-center space-y-3 relative shadow-xl">
         <div className="relative inline-block mx-auto">
           <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
-            alt="Aarav Mehta"
+            src={avatar}
+            alt={name}
             className="w-20 h-20 rounded-full object-cover border-2 border-purple-500 shadow-lg shadow-purple-500/30"
           />
           <div className="absolute bottom-0 right-0 p-1 rounded-full bg-purple-600 text-white border-2 border-[#181924]">
@@ -37,79 +41,51 @@ export const ProfileScreen: React.FC = () => {
 
         <div>
           <div className="flex items-center justify-center gap-1.5">
-            <h2 className="text-base font-extrabold text-white">Aarav Mehta</h2>
+            <h2 className="text-base font-extrabold text-white">{name}</h2>
             <span className="px-1.5 py-0.2 rounded text-[9px] bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
               PRO
             </span>
           </div>
-          <p className="text-xs text-gray-400 font-mono">@aarav_surat • Vesu, Surat</p>
+          <p className="text-xs text-gray-400 font-mono">
+            {handle} {userEmail ? `• ${userEmail}` : '• Vesu, Surat'}
+          </p>
         </div>
 
         <p className="text-xs text-gray-300 leading-relaxed max-w-xs mx-auto">
-          Architect & vinyl lover. Playing deep cuts on rotary mixers, exploring rooftop viewpoints & specialty coffee across Surat.
+          Curating real-world connections, rooftop gatherings & specialty coffee across Surat.
         </p>
 
         {/* Profile Action Buttons */}
         <div className="flex gap-2 pt-1">
           <button
-            onClick={() => alert('Profile editing modal')}
+            onClick={() => navigateTo('settings_safety')}
             className="flex-1 py-2 rounded-xl bg-[#232537] hover:bg-[#2b2e42] text-xs font-semibold text-gray-200 border border-[#2f3248] transition"
           >
-            Edit Profile
+            Edit Settings
           </button>
           <button
-            onClick={() => alert('Vibe card shared to clipboard!')}
-            className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-xs font-semibold text-white shadow-md shadow-purple-600/30 transition flex items-center justify-center gap-1.5 hover:brightness-110"
+            onClick={logout}
+            className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-xs font-semibold text-red-400 border border-red-500/20 transition flex items-center gap-1.5"
           >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Share Vibe Card</span>
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Log Out</span>
           </button>
         </div>
       </div>
 
       {/* Stats Counter */}
-      <div className="grid grid-cols-3 gap-2 bg-[#181924] p-3 rounded-2xl border border-[#27293b] text-center">
-        <div>
-          <span className="text-base font-extrabold text-white font-mono">18</span>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="bg-[#181924] p-3 rounded-2xl border border-[#27293b]">
+          <span className="text-base font-extrabold text-white">14</span>
           <p className="text-[10px] text-gray-400">Gatherings</p>
         </div>
-        <div className="border-x border-[#282a3d]">
-          <span className="text-base font-extrabold text-purple-400 font-mono">34</span>
+        <div className="bg-[#181924] p-3 rounded-2xl border border-[#27293b]">
+          <span className="text-base font-extrabold text-purple-400">342</span>
           <p className="text-[10px] text-gray-400">Connections</p>
         </div>
-        <div>
-          <span className="text-base font-extrabold text-yellow-400 font-mono flex items-center justify-center gap-0.5">
-            ★ 4.9
-          </span>
-          <p className="text-[10px] text-gray-400">Vibe Score</p>
-        </div>
-      </div>
-
-      {/* Reputation Badges */}
-      <div className="space-y-2">
-        <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-          <Award className="w-3.5 h-3.5 text-pink-400" />
-          <span>Reputation Badges</span>
-        </h3>
-
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-[#181924] p-2.5 rounded-2xl border border-[#27293b] text-center space-y-1">
-            <span className="text-xl">👑</span>
-            <h4 className="text-[10px] font-bold text-white">Top Host</h4>
-            <p className="text-[9px] text-gray-400">95%+ 5-star ratings</p>
-          </div>
-
-          <div className="bg-[#181924] p-2.5 rounded-2xl border border-[#27293b] text-center space-y-1">
-            <span className="text-xl">🛡️</span>
-            <h4 className="text-[10px] font-bold text-white">Govt ID Verified</h4>
-            <p className="text-[9px] text-gray-400">Aadhaar verified</p>
-          </div>
-
-          <div className="bg-[#181924] p-2.5 rounded-2xl border border-[#27293b] text-center space-y-1">
-            <span className="text-xl">⚓</span>
-            <h4 className="text-[10px] font-bold text-white">Anchor</h4>
-            <p className="text-[9px] text-gray-400">Surat Vinyl Circle</p>
-          </div>
+        <div className="bg-[#181924] p-3 rounded-2xl border border-[#27293b]">
+          <span className="text-base font-extrabold text-amber-400">4.9 ★</span>
+          <p className="text-[10px] text-gray-400">Reputation</p>
         </div>
       </div>
 
@@ -149,4 +125,3 @@ export const ProfileScreen: React.FC = () => {
     </div>
   );
 };
-
