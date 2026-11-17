@@ -43,22 +43,35 @@ export const AuthScreen: React.FC = () => {
           throw new Error('Password must be at least 6 characters.');
         }
         await signUpWithEmail(email.trim(), password, fullName.trim());
-        setSuccessMsg('Account created successfully! Taking you in...');
+        setSuccessMsg('Account registered! Taking you to personalize your vibe...');
         setTimeout(() => {
           navigateTo('onboarding_interests');
-        }, 800);
+        }, 900);
       } else {
         if (!email.trim() || !password.trim()) {
           throw new Error('Please enter both email and password.');
         }
         await signInWithEmail(email.trim(), password);
-        setSuccessMsg('Signed in! Welcome back.');
+        setSuccessMsg('Signed in successfully! Welcome back.');
         setTimeout(() => {
           navigateTo('home');
         }, 500);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please try again.');
+      const msg = err.message || '';
+      if (
+        msg.includes('rate limit') ||
+        msg.includes('over_email_send_rate_limit') ||
+        err.status === 429
+      ) {
+        setErrorMsg(
+          'Email verification limit reached on Supabase free tier. In your Supabase Dashboard: go to Authentication -> Providers -> Email -> Turn OFF "Confirm email", or try signing in directly.'
+        );
+      } else if (msg.includes('Invalid login credentials')) {
+        setErrorMsg('Invalid email or password. If you are new, click "Sign Up" below to create an account.');
+      } else {
+        setErrorMsg(msg || 'Authentication failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -77,7 +90,6 @@ export const AuthScreen: React.FC = () => {
       setPhoneStep('otp');
       setSuccessMsg(`OTP sent to ${userPhone}`);
     } catch (err: any) {
-      // If Twilio isn't set up yet on free Supabase tier, inform clearly and allow demo entry
       if (err.message && (err.message.includes('SMS') || err.message.includes('provider') || err.message.includes('disabled'))) {
         setPhoneStep('otp');
         setSuccessMsg('Demo OTP generated (enter 7294 to continue).');
@@ -101,9 +113,8 @@ export const AuthScreen: React.FC = () => {
       try {
         await verifyOtp(userPhone.trim(), token);
       } catch (err: any) {
-        // If demo OTP entered
         if (token !== '7294') {
-          throw new Error('Invalid OTP code. Please enter 7294 for demo or request resend.');
+          throw new Error('Invalid OTP code. Please enter 7294 for demo.');
         }
       }
       setSuccessMsg('Phone verified successfully!');
@@ -122,7 +133,7 @@ export const AuthScreen: React.FC = () => {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Google Sign-in failed. Please ensure Google provider is enabled.');
+      setErrorMsg(err.message || 'Google Sign-in failed. Please ensure Google provider is enabled in Supabase.');
     }
   };
 
@@ -154,7 +165,7 @@ export const AuthScreen: React.FC = () => {
           <p className="text-xs text-gray-400">
             {authMode === 'email'
               ? isSignUp
-                ? 'Join Planora to discover gatherings, find people, and host events.'
+                ? 'Join Planora to discover real gatherings, find people & RSVP.'
                 : 'Log in to your Planora account to continue.'
               : phoneStep === 'input'
               ? 'Enter your phone number to receive a secure SMS code.'
@@ -162,7 +173,7 @@ export const AuthScreen: React.FC = () => {
           </p>
         </div>
 
-        {/* Auth Method Selector Pills */}
+        {/* Auth Method Selector */}
         <div className="flex bg-[#181924] p-1 rounded-2xl border border-[#282a3c] mt-6 mb-4">
           <button
             type="button"
@@ -200,9 +211,9 @@ export const AuthScreen: React.FC = () => {
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-            <span>{errorMsg}</span>
+          <div className="mb-4 p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+            <span className="leading-relaxed">{errorMsg}</span>
           </div>
         )}
 
@@ -226,7 +237,7 @@ export const AuthScreen: React.FC = () => {
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Aarav Mehta"
+                    placeholder="e.g. Krushang"
                     className="bg-transparent text-sm text-white focus:outline-none flex-1 placeholder-gray-500"
                   />
                 </div>
@@ -263,7 +274,6 @@ export const AuthScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Toggle sign in / sign up */}
             <div className="flex justify-between items-center text-xs pt-1">
               <span className="text-gray-400">
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}
@@ -287,7 +297,7 @@ export const AuthScreen: React.FC = () => {
               className="w-full mt-2 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white font-semibold text-sm shadow-lg shadow-purple-600/30 hover:brightness-110 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              <span>{isSignUp ? 'Create Planora Account' : 'Sign In with Email'}</span>
+              <span>{isSignUp ? 'Create Planora Account' : 'Sign In'}</span>
             </button>
           </form>
         )}

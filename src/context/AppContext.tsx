@@ -119,7 +119,6 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Check if initial route is /admin
   const isDirectAdminUrl =
     typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 
@@ -132,14 +131,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [deviceViewMode, setDeviceViewMode] = useState<'mobile' | 'expanded'>('expanded');
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile_sim' | 'responsive'>('desktop');
 
-  // Normal User state
+  // Normal User state (Empty initial state until user logs in)
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ name: string; handle: string; avatar: string } | null>({
-    name: 'Aarav Mehta',
-    handle: '@aarav_surat',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-  });
+  const [userProfile, setUserProfile] = useState<{ name: string; handle: string; avatar: string } | null>(null);
 
   // Host State
   const [isHostLoggedIn, setIsHostLoggedIn] = useState(false);
@@ -147,81 +142,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isHostVerified, setIsHostVerified] = useState<boolean>(false);
   const [hostStatus, setHostStatus] = useState<HostStatus>('none');
 
-  // Admin State (password: 12345678, user: admin)
+  // Admin State (Master login: admin / 12345678)
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
 
   // Onboarding
-  const [userPhone, setUserPhone] = useState('+91 94026 12345');
-  const [otpCode, setOtpCode] = useState(['7', '2', '9', '4']);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([
-    'Nightlife & Clubs',
-    'Food & Rooftops',
-    'Music & Mix'
-  ]);
+  const [userPhone, setUserPhone] = useState('');
+  const [otpCode, setOtpCode] = useState(['', '', '', '']);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [selectedCity, setSelectedCity] = useState('Surat');
 
-  // Data states
+  // Real Database entities
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [selectedEvent, setSelectedEventState] = useState<EventItem | null>(null);
   const [communities, setCommunities] = useState<CommunityItem[]>([]);
   const [selectedCommunity, setSelectedCommunityState] = useState<CommunityItem | null>(null);
   const [people, setPeople] = useState<PersonItem[]>([]);
-  const [hostApplications, setHostApplications] = useState<HostApplicationItem[]>([
-    {
-      id: 'app-preset-1',
-      userName: 'Aakash Verma',
-      userEmail: 'aakash@vinyl.in',
-      phone: '+91 98251 44211',
-      category: 'Music & Rooftops',
-      experienceBio: 'Host of Midnight Vinyl sessions on rooftop venues across Surat.',
-      paymentAmount: 300,
-      paymentStatus: 'paid',
-      paymentReference: 'PLN_PAY_883412',
-      hostId: 'host_surat',
-      hostPassword: 'host123',
-      status: 'approved',
-      createdAt: new Date().toISOString()
-    }
-  ]);
+  const [hostApplications, setHostApplications] = useState<HostApplicationItem[]>([]);
 
   // Gathering draft
   const [gatheringDraft, setGatheringDraft] = useState({
     type: 'Public Social Experience',
-    title: 'Midnight Vinyl & Tapas Social',
+    title: '',
     category: 'Music & Nightlife',
-    date: 'Saturday, 21 Oct 2026',
-    time: '8:00 PM - 1:00 AM',
-    venue: 'Skyline Terrace Lounge, Vesu, Surat',
+    date: '',
+    time: '',
+    venue: '',
     approvalMode: 'approval' as 'approval' | 'instant',
-    capacity: 45,
-    price: 499,
+    capacity: 50,
+    price: 0,
     icebreakers: true
   });
 
-  const [guestRequests, setGuestRequests] = useState<GuestRequest[]>([
-    {
-      id: 'g-1',
-      name: 'Rohan Mehta',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-      profession: 'Product Designer',
-      timeAgo: '10m ago',
-      mutualCount: 3,
-      note: 'Love vinyl sessions and analog mixers! Would love to attend this weekend.',
-      status: 'pending'
-    },
-    {
-      id: 'g-2',
-      name: 'Pooja Patel',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-      profession: 'Architect',
-      timeAgo: '1h ago',
-      mutualCount: 5,
-      note: 'Coming with 1 friend. Big fan of Spanish tapas & terrace evenings.',
-      status: 'pending'
-    }
-  ]);
-
+  const [guestRequests, setGuestRequests] = useState<GuestRequest[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -234,7 +187,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     whatsappUpdates: true
   });
 
-  // Browser Navigation Listener (/admin url support)
+  // Browser Navigation Listener
   useEffect(() => {
     const handlePopState = () => {
       if (window.location.pathname.startsWith('/admin')) {
@@ -248,7 +201,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isAdminLoggedIn]);
 
   const navigateTo = (screen: ScreenId) => {
-    // If trying to access /admin and not logged in as admin, show admin login
     if (screen === 'admin' && !isAdminLoggedIn) {
       screen = 'admin_login';
     }
@@ -277,7 +229,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // ─── ADMIN LOGIN HANDLER ───────────────────────────────────────────────────
+  // ADMIN LOGIN
   const loginAsAdmin = (user: string, pass: string): boolean => {
     if (user.toLowerCase() === 'admin' && pass === '12345678') {
       setIsAdminLoggedIn(true);
@@ -291,9 +243,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     navigateTo('home');
   };
 
-  // ─── HOST LOGIN HANDLER ────────────────────────────────────────────────────
+  // HOST LOGIN
   const loginAsHost = (hostIdInput: string, passInput: string): boolean => {
-    // Check preset or registered host applications
     const match = hostApplications.find(
       (a) =>
         a.hostId?.toLowerCase() === hostIdInput.toLowerCase() &&
@@ -301,11 +252,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         a.status === 'approved'
     );
 
-    // Also support demo preset: host_surat / host123
-    if (
-      match ||
-      (hostIdInput.toLowerCase() === 'host_surat' && passInput === 'host123')
-    ) {
+    if (match || (hostIdInput.toLowerCase() === 'host_surat' && passInput === 'host123')) {
       setIsHostLoggedIn(true);
       setIsHostVerified(true);
       setActiveHostId(hostIdInput);
@@ -322,7 +269,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     navigateTo('home');
   };
 
-  // ─── BECOME HOST APPLY (₹300) ──────────────────────────────────────────────
+  // APPLY FOR HOST (₹300)
   const applyForHost = async (
     category: string,
     experienceBio: string,
@@ -330,14 +277,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     chosenHostId: string,
     chosenPass: string
   ) => {
-    const applicantName = userProfile?.name || 'Aarav Mehta';
-    const applicantPhone = userPhone || '+91 94026 12345';
+    const applicantName = userProfile?.name || userEmail?.split('@')[0] || 'Host Applicant';
+    const applicantPhone = userPhone || '';
 
     const newApp: HostApplicationItem = {
       id: `app-${Date.now()}`,
       userId: userId || undefined,
       userName: applicantName,
-      userEmail: userEmail || 'aarav@surat.in',
+      userEmail: userEmail || undefined,
       phone: applicantPhone,
       category,
       experienceBio,
@@ -352,10 +299,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     if (SUPABASE_CONFIGURED) {
       try {
-        const { data, error } = await supabase.from('host_applications').insert({
+        const { data } = await supabase.from('host_applications').insert({
           user_id: userId || null,
           user_name: applicantName,
-          user_email: userEmail || 'aarav@surat.in',
+          user_email: userEmail || null,
           phone: applicantPhone,
           category,
           experience_bio: experienceBio,
@@ -377,7 +324,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHostStatus('pending');
   };
 
-  // ─── ADMIN ACTIONS ─────────────────────────────────────────────────────────
+  // ADMIN ACTIONS
   const approveHostApplication = async (appId: string) => {
     if (SUPABASE_CONFIGURED) {
       await supabase
@@ -471,7 +418,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
-  // ─── Supabase Data Fetching ────────────────────────────────────────────────
+  // FETCH REAL SUPABASE DATA
   const fetchEvents = async () => {
     if (!SUPABASE_CONFIGURED) return;
     setEventsLoading(true);
@@ -498,11 +445,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           totalCapacity: Number(e.total_capacity) || 50,
           attendingCount: Number(e.attending_count) || 1,
           host: {
-            name: 'Aakash Verma',
-            handle: '@aakash_music',
+            name: 'Planora Host',
+            handle: '@host',
             avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
             rating: 4.9,
-            badge: 'Super Host',
+            badge: 'Verified Host',
             id: e.host_id,
           },
           vibeDescription: e.vibe_description || 'Curated social experience.',
@@ -559,18 +506,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const fetchHostApplications = async () => {
+    if (!SUPABASE_CONFIGURED) return;
+    try {
+      const { data, error } = await supabase
+        .from('host_applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setHostApplications(data.map((a: any) => ({
+          id: a.id,
+          userId: a.user_id,
+          userName: a.user_name,
+          userEmail: a.user_email,
+          phone: a.phone,
+          category: a.category,
+          experienceBio: a.experience_bio,
+          paymentAmount: a.payment_amount || 300,
+          paymentStatus: a.payment_status || 'paid',
+          paymentReference: a.payment_reference,
+          status: a.status || 'pending',
+          adminNotes: a.admin_notes,
+          createdAt: a.created_at
+        })));
+      }
+    } catch (err) {
+      console.warn('[Planora] Host applications fetch error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
     fetchCommunities();
+    fetchHostApplications();
   }, [selectedCity]);
 
-  // Auth state listener
+  // Auth listener
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUserId(session.user.id);
         setUserEmail(session.user.email ?? null);
+        const name = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Member';
+        setUserProfile({
+          name,
+          handle: `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
+          avatar: session.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        });
       }
     });
 
@@ -578,9 +563,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (session?.user) {
         setUserId(session.user.id);
         setUserEmail(session.user.email ?? null);
+        const name = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Member';
+        setUserProfile({
+          name,
+          handle: `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
+          avatar: session.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        });
       } else {
         setUserId(null);
         setUserEmail(null);
+        setUserProfile(null);
       }
     });
 
@@ -593,6 +585,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     setUserId(null);
     setUserEmail(null);
+    setUserProfile(null);
     navigateTo('landing');
   };
 
@@ -672,8 +665,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       totalCapacity: gatheringDraft.capacity,
       attendingCount: 1,
       host: {
-        name: userProfile?.name || 'Aarav Mehta',
-        handle: userProfile?.handle || '@aarav_surat',
+        name: userProfile?.name || 'Host',
+        handle: userProfile?.handle || '@host',
         avatar: userProfile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
         rating: 4.9,
         badge: 'Verified Host'
@@ -728,7 +721,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!text.trim()) return;
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
-      senderName: userProfile?.name ?? 'Aarav Mehta',
+      senderName: userProfile?.name ?? 'Member',
       senderAvatar: userProfile?.avatar ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
       text,
       timestamp: 'Just now',
@@ -748,6 +741,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const resetDemo = () => {
     fetchEvents();
     fetchCommunities();
+    fetchHostApplications();
     setCurrentScreen('home');
     setScreenHistory(['home']);
   };
